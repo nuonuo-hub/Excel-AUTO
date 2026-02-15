@@ -1555,14 +1555,28 @@
                 }
             };
 
-            // ========== 上传事件 ==========
-            singleDropZone.addEventListener('click', () => singleFileInput.click());
+// ========== 上传事件 ==========
+singleDropZone.addEventListener('click', () => singleFileInput.click());
 
-            singleFileInput.addEventListener('change', (e) => {
-                if (e.target.files.length > 0) {
-                    handleSingleFiles(e.target.files);
-                }
-            });
+singleFileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+        handleSingleFiles(e.target.files);
+        // 清空 input 值，允许重新上传同一文件
+        singleFileInput.value = '';
+    }
+});
+
+// ... 其他代码 ...
+
+ratioDropZone.addEventListener('click', () => ratioFileInput.click());
+
+ratioFileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+        handleRatioFiles(e.target.files);
+        // 清空 input 值，允许重新上传同一文件
+        ratioFileInput.value = '';
+    }
+});
 
             singleDropZone.addEventListener('dragover', (e) => {
                 e.preventDefault();
@@ -1608,53 +1622,94 @@
                 }
             });
 
-            // ========== 单领文件处理（修改版）==========
-            function handleSingleFiles(files) {
-                const fileArray = Array.from(files);
-                singleFileInfo.innerText = fileArray.map(f => f.name).join('\n');
-                
-                singleFilesData = [];
-                let processedCount = 0;
-                
-                fileArray.forEach((file, index) => {
-                    const ext = file.name.split('.').pop().toLowerCase();
-                    const reader = new FileReader();
+ // ========== 修改后的单领文件处理（支持单个文件更新）==========
+function handleSingleFiles(files) {
+    const fileArray = Array.from(files);
+    
+    // 显示文件信息
+    const fileNames = fileArray.map(f => f.name).join('\n');
+    singleFileInfo.innerText = fileNames;
+    
+    let processedCount = 0;
+    
+    fileArray.forEach((file, index) => {
+        const ext = file.name.split('.').pop().toLowerCase();
+        const reader = new FileReader();
 
-                    reader.onload = (e) => {
-                        try {
-                            let data;
-                            if (ext === 'csv' || ext === 'txt') {
-                                const text = e.target.result;
-                                const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
-                                data = lines.map(l => l.split(',').map(c => c.trim()));
-                            } else {
-                                const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-                                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                                data = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
-                            }
-                            
-                            parseSingleFile(data, file.name, index);
-                            processedCount++;
-                            
-                            if (processedCount === fileArray.length) {
-                                singleFilesLoaded = true;
-                                renderSinglePriceArea();
-                                renderJpySettings();
-                                checkGenerateButton();
-                            }
-                        } catch (err) {
-                            console.error(`解析单领文件 ${file.name} 失败:`, err);
-                            alert(`解析单领文件 ${file.name} 失败: ${err.message}`);
-                        }
-                    };
-
-                    if (ext === 'csv' || ext === 'txt') {
-                        reader.readAsText(file, 'UTF-8');
+        reader.onload = (e) => {
+            try {
+                let data;
+                if (ext === 'csv' || ext === 'txt') {
+                    const text = e.target.result;
+                    const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+                    data = lines.map(l => l.split(',').map(c => c.trim()));
+                } else {
+                    const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    data = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+                }
+                
+                // 检查是否已存在同名文件
+                const existingFileIndex = singleFilesData.findIndex(f => f.fileName === file.name);
+                
+                if (existingFileIndex !== -1) {
+                    // 更新已存在的文件
+                    if (confirm(`文件 "${file.name}" 已存在，是否要替换它？`)) {
+                        parseSingleFile(data, file.name, existingFileIndex);
+                        console.log(`已更新文件: ${file.name}`);
                     } else {
-                        reader.readAsArrayBuffer(file);
+                        // 用户取消替换，作为新文件添加
+                        const newIndex = singleFilesData.length;
+                        parseSingleFile(data, file.name, newIndex);
                     }
-                });
+                } else {
+                    // 新文件，添加到数组末尾
+                    const newIndex = singleFilesData.length;
+                    parseSingleFile(data, file.name, newIndex);
+                }
+                
+                processedCount++;
+                
+                if (processedCount === fileArray.length) {
+                    singleFilesLoaded = singleFilesData.length > 0;
+                    renderSinglePriceArea();
+                    renderJpySettings();
+                    checkGenerateButton();
+                    
+                    // 更新文件信息显示
+                    updateSingleFileInfo();
+                }
+            } catch (err) {
+                console.error(`解析单领文件 ${file.name} 失败:`, err);
+                alert(`解析单领文件 ${file.name} 失败: ${err.message}`);
             }
+        };
+
+        if (ext === 'csv' || ext === 'txt') {
+            reader.readAsText(file, 'UTF-8');
+        } else {
+            reader.readAsArrayBuffer(file);
+        }
+    });
+}
+
+// ========== 更新单领文件信息显示 ==========
+function updateSingleFileInfo() {
+    if (singleFilesData.length === 0) {
+        singleFileInfo.innerText = '未选择文件';
+        return;
+    }
+    
+    let infoText = '';
+    singleFilesData.forEach((file, index) => {
+        infoText += `${index + 1}. ${file.fileName}`;
+        if (file.memberOrders) {
+            infoText += ` (${file.memberOrders.length} 条订单)`;
+        }
+        infoText += '\n';
+    });
+    singleFileInfo.innerText = infoText;
+}
 
 // ========== 修复订单提取的单领解析函数 ==========
 function parseSingleFile(rows, fileName, fileIndex) {
@@ -1850,55 +1905,95 @@ function parseSingleFile(rows, fileName, fileIndex) {
     }
 }
 
-            // ========== 配比文件处理（修改分组识别）==========
-            function handleRatioFiles(files) {
-                const fileArray = Array.from(files);
-                ratioFileInfo.innerText = fileArray.map(f => f.name).join('\n');
-                
-                ratioFilesData = [];
-                let processedCount = 0;
-                
-                fileArray.forEach((file, index) => {
-                    const ext = file.name.split('.').pop().toLowerCase();
-                    const reader = new FileReader();
+// ========== 修改后的配比文件处理（支持单个文件更新）==========
+function handleRatioFiles(files) {
+    const fileArray = Array.from(files);
+    
+    // 显示文件信息
+    const fileNames = fileArray.map(f => f.name).join('\n');
+    ratioFileInfo.innerText = fileNames;
+    
+    let processedCount = 0;
+    
+    fileArray.forEach((file, index) => {
+        const ext = file.name.split('.').pop().toLowerCase();
+        const reader = new FileReader();
 
-                    reader.onload = (e) => {
-                        try {
-                            let data;
-                            if (ext === 'csv' || ext === 'txt') {
-                                const text = e.target.result;
-                                const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
-                                data = lines.map(l => l.split(',').map(c => c.trim()));
-                            } else {
-                                const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-                                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                                data = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
-                            }
-                            
-                            parseRatioFile(data, file.name, index);
-                            processedCount++;
-                            
-                            if (processedCount === fileArray.length) {
-                                ratioFilesLoaded = true;
-                                renderPeidiSettings();
-                                renderJpySettings();
-                                updateRatioFileSelect();
-                                checkGenerateButton();
-                            }
-                        } catch (err) {
-                            console.error(`解析配比文件 ${file.name} 失败:`, err);
-                            alert(`解析配比文件 ${file.name} 失败: ${err.message}`);
-                        }
-                    };
-
-                    if (ext === 'csv' || ext === 'txt') {
-                        reader.readAsText(file, 'UTF-8');
+        reader.onload = (e) => {
+            try {
+                let data;
+                if (ext === 'csv' || ext === 'txt') {
+                    const text = e.target.result;
+                    const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+                    data = lines.map(l => l.split(',').map(c => c.trim()));
+                } else {
+                    const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    data = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+                }
+                
+                // 检查是否已存在同名文件
+                const existingFileIndex = ratioFilesData.findIndex(f => f.fileName === file.name);
+                
+                if (existingFileIndex !== -1) {
+                    // 更新已存在的文件
+                    if (confirm(`文件 "${file.name}" 已存在，是否要替换它？`)) {
+                        parseRatioFile(data, file.name, existingFileIndex);
+                        console.log(`已更新文件: ${file.name}`);
                     } else {
-                        reader.readAsArrayBuffer(file);
+                        // 用户取消替换，作为新文件添加
+                        const newIndex = ratioFilesData.length;
+                        parseRatioFile(data, file.name, newIndex);
                     }
-                });
+                } else {
+                    // 新文件，添加到数组末尾
+                    const newIndex = ratioFilesData.length;
+                    parseRatioFile(data, file.name, newIndex);
+                }
+                
+                processedCount++;
+                
+                if (processedCount === fileArray.length) {
+                    ratioFilesLoaded = ratioFilesData.length > 0;
+                    renderPeidiSettings();
+                    renderJpySettings();
+                    updateRatioFileSelect();
+                    checkGenerateButton();
+                    
+                    // 更新文件信息显示
+                    updateRatioFileInfo();
+                }
+            } catch (err) {
+                console.error(`解析配比文件 ${file.name} 失败:`, err);
+                alert(`解析配比文件 ${file.name} 失败: ${err.message}`);
             }
+        };
 
+        if (ext === 'csv' || ext === 'txt') {
+            reader.readAsText(file, 'UTF-8');
+        } else {
+            reader.readAsArrayBuffer(file);
+        }
+    });
+}
+
+// ========== 更新配比文件信息显示 ==========
+function updateRatioFileInfo() {
+    if (ratioFilesData.length === 0) {
+        ratioFileInfo.innerText = '未选择文件';
+        return;
+    }
+    
+    let infoText = '';
+    ratioFilesData.forEach((file, index) => {
+        infoText += `${index + 1}. ${file.fileName}`;
+        if (file.rawMemberOrders) {
+            infoText += ` (${file.rawMemberOrders.length} 条订单)`;
+        }
+        infoText += '\n';
+    });
+    ratioFileInfo.innerText = infoText;
+}
             // ========== 修改后的配比解析函数（只修改分组识别）==========
             function parseRatioFile(rows, fileName, fileIndex) {
                 try {

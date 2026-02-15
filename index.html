@@ -2624,465 +2624,549 @@ function parseSingleFile(rows, fileName, fileIndex) {
                 return Array.from(map.values());
             }
 
-            // ========== 转换为目标格式 ==========
-            function convertToTargetFormat() {
-                const noIsland = noIslandCheckbox.checked;
-                const useJpy = document.querySelector('input[name="jpyMode"]:checked').value === 'on';
-                
-                let allFilesData = [];
-                let allOrders = [];
-                
-                singleFilesData.forEach((fileData, fileIdx) => {
-                    if (!fileData) return;
-                    
-                    const orders = fileData.memberOrders.map(order => ({
-                        ...order,
-                        fileIdx: `single_${fileIdx}`,
-                        fileTitle: fileData.title,
-                        fileType: 'single',
-                        groupName: order.groupName
-                    }));
-                    
-                    allOrders.push(...orders);
-                    
-                    allFilesData.push({
-                        fileIdx: `single_${fileIdx}`,
-                        title: fileData.title,
-                        type: 'single',
-                        orders: orders,
-                        allProducts: fileData.allProducts || [],
-                        groups: fileData.groups
-                    });
-                });
-                
-                ratioFilesData.forEach((fileData, fileIdx) => {
-                    if (!fileData) return;
-                    
-                    const filteredOrders = filterRatioOrders(fileData.rawMemberOrders, fileIdx);
-                    const mergedOrders = mergeOrders(filteredOrders);
-                    
-                    const orders = mergedOrders.map(order => ({
-                        ...order,
-                        fileIdx: `ratio_${fileIdx}`,
-                        fileTitle: fileData.title,
-                        fileType: 'ratio',
-                        groupName: order.groupName
-                    }));
-                    
-                    allOrders.push(...orders);
-                    
-                    allFilesData.push({
-                        fileIdx: `ratio_${fileIdx}`,
-                        title: fileData.title,
-                        type: 'ratio',
-                        orders: orders,
-                        allProducts: fileData.allProducts || [],
-                        groups: fileData.groups
-                    });
-                });
+// ========== 完整的 convertToTargetFormat 函数 ==========
+function convertToTargetFormat() {
+    const noIsland = noIslandCheckbox.checked;
+    const useJpy = document.querySelector('input[name="jpyMode"]:checked').value === 'on';
+    
+    let allFilesData = [];
+    let allOrders = [];
+    
+    singleFilesData.forEach((fileData, fileIdx) => {
+        if (!fileData) return;
+        
+        const orders = fileData.memberOrders.map(order => ({
+            ...order,
+            fileIdx: `single_${fileIdx}`,
+            fileTitle: fileData.title,
+            fileType: 'single',
+            groupName: order.groupName
+        }));
+        
+        allOrders.push(...orders);
+        
+        allFilesData.push({
+            fileIdx: `single_${fileIdx}`,
+            title: fileData.title,
+            type: 'single',
+            orders: orders,
+            allProducts: fileData.allProducts || [],
+            groups: fileData.groups
+        });
+    });
+    
+    ratioFilesData.forEach((fileData, fileIdx) => {
+        if (!fileData) return;
+        
+        const filteredOrders = filterRatioOrders(fileData.rawMemberOrders, fileIdx);
+        const mergedOrders = mergeOrders(filteredOrders);
+        
+        const orders = mergedOrders.map(order => ({
+            ...order,
+            fileIdx: `ratio_${fileIdx}`,
+            fileTitle: fileData.title,
+            fileType: 'ratio',
+            groupName: order.groupName
+        }));
+        
+        allOrders.push(...orders);
+        
+        allFilesData.push({
+            fileIdx: `ratio_${fileIdx}`,
+            title: fileData.title,
+            type: 'ratio',
+            orders: orders,
+            allProducts: fileData.allProducts || [],
+            groups: fileData.groups
+        });
+    });
 
-                // ========== 岛内均摊计算 ==========
-                let singleTotalQuantity = 0;
-                let ratioNonBoxTotalQuantity = 0;
-                let ratioBoxTotalWeight = 0;
-                
-                const ratioGroupInfo = new Map();
+    // ========== 岛内均摊计算 ==========
+    let singleTotalQuantity = 0;
+    let ratioNonBoxTotalQuantity = 0;
+    let ratioBoxTotalWeight = 0;
+    
+    const ratioGroupInfo = new Map();
 
-                allFilesData.forEach(file => {
-                    if (file.type === 'single') {
-                        file.orders.forEach(order => {
-                            singleTotalQuantity += order.quantity;
-                        });
-                    } else {
-                        const fileIdx = file.fileIdx.replace('ratio_', '');
-                        const ratioFileData = ratioFilesData[fileIdx];
-                        
-                        file.orders.forEach(order => {
-                            if (order.isBox) {
-                                const groupName = order.groupName;
-                                const key = `${fileIdx}_${groupName}`;
-                                
-                                if (!ratioGroupInfo.has(key)) {
-                                    const group = ratioFileData.groups.find(g => g.name === groupName);
-                                    const productTypeCount = group ? group.products.length : 0;
-                                    ratioGroupInfo.set(key, {
-                                        productTypeCount: productTypeCount,
-                                        boxCount: 0
-                                    });
-                                }
-                                
-                                const info = ratioGroupInfo.get(key);
-                                info.boxCount += order.quantity;
-                                ratioGroupInfo.set(key, info);
-                            } else {
-                                ratioNonBoxTotalQuantity += order.quantity;
-                            }
+    allFilesData.forEach(file => {
+        if (file.type === 'single') {
+            file.orders.forEach(order => {
+                singleTotalQuantity += order.quantity;
+            });
+        } else {
+            const fileIdx = file.fileIdx.replace('ratio_', '');
+            const ratioFileData = ratioFilesData[fileIdx];
+            
+            file.orders.forEach(order => {
+                if (order.isBox) {
+                    const groupName = order.groupName;
+                    const key = `${fileIdx}_${groupName}`;
+                    
+                    if (!ratioGroupInfo.has(key)) {
+                        const group = ratioFileData.groups.find(g => g.name === groupName);
+                        const productTypeCount = group ? group.products.length : 0;
+                        ratioGroupInfo.set(key, {
+                            productTypeCount: productTypeCount,
+                            boxCount: 0
                         });
                     }
-                });
-
-                ratioGroupInfo.forEach(info => {
-                    ratioBoxTotalWeight += info.boxCount * info.productTypeCount;
-                });
-
-                const denominator = singleTotalQuantity + ratioNonBoxTotalQuantity + ratioBoxTotalWeight;
-
-                let sharePerItem = 0;
-                if (!noIsland && islandTotalAmount > 0 && denominator > 0) {
-                    sharePerItem = islandTotalAmount / denominator;
-                }
-
-                // ========== 构建明细表 ==========
-                let detailHeaders = ['角色', 'cn', '数量'];
-                if (useJpy) detailHeaders.push('日元');
-                detailHeaders.push('单价');
-                if (!noIsland) detailHeaders.push('岛内均摊');
-                detailHeaders.push('肾额', '国际');
-                
-                let detailRows = [];
-                let totalJpyAmount = 0;
-                
-                allFilesData.forEach(file => {
-                    detailRows.push({
-                        isTitleRow: true,
-                        fileTitle: file.title,
-                        fileType: file.type,
-                        colspan: detailHeaders.length
-                    });
                     
-                    const productGroups = new Map();
-                    const productOrder = [];
-                    
-                    file.orders.forEach(order => {
-                        const productName = order.productName;
-                        if (!productGroups.has(productName)) {
-                            productGroups.set(productName, []);
-                            productOrder.push(productName);
-                        }
-                        productGroups.get(productName).push(order);
-                    });
-                    
-                    productOrder.forEach(productName => {
-                        const orders = productGroups.get(productName);
-                        
-                        let productPrice = 0;
-                        if (file.type === 'single') {
-                            const key = `${file.fileIdx.replace('single_', '')}_${productName}`;
-                            productPrice = singlePriceMap.get(key) || 0;
-                            
-                            if (productPrice === 0 && file.allProducts) {
-                                const product = file.allProducts.find(p => p.name === productName);
-                                if (product) productPrice = product.price;
-                            }
-                        } else {
-                            for (const order of orders) {
-                                if (order.isBox) {
-                                    const key = `${file.fileIdx.replace('ratio_', '')}_${order.productName}`;
-                                    productPrice = ratioPriceMap.get(key) || 0;
-                                    if (productPrice === 0 && file.allProducts) {
-                                        const product = file.allProducts.find(p => p.isBox && p.name === order.productName);
-                                        if (product) productPrice = product.price;
-                                    }
-                                    break;
-                                } else {
-                                    for (const group of ratioFilesData[file.fileIdx.replace('ratio_', '')]?.groups || []) {
-                                        const product = group.products.find(p => {
-                                            const fileData = ratioFilesData[file.fileIdx.replace('ratio_', '')];
-                                            if (fileData && fileData.hasDuplicateNames) {
-                                                return (p.name + group.name) === order.productName;
-                                            } else {
-                                                return p.name === order.productName;
-                                            }
-                                        });
-                                        if (product) {
-                                            const key = `${file.fileIdx.replace('ratio_', '')}_${product.name}`;
-                                            productPrice = ratioPriceMap.get(key) || product.price;
-                                            break;
-                                        }
-                                    }
-                                    break;
-                                }
-                            }
-                        }
-                        
-                        orders.forEach((order, idx) => {
-                            let jpyAmount = 0;
-                            if (useJpy) {
-                                const key = `${file.type}_${file.fileIdx.replace(file.type + '_', '')}_${order.groupName}`;
-                                const groupJpy = jpyMap.get(key) || 0;
-                                
-                                if (order.isBox) {
-                                    const fileIdx = file.fileIdx.replace('ratio_', '');
-                                    const boxKey = `${fileIdx}_${order.groupName}`;
-                                    const info = ratioGroupInfo.get(boxKey);
-                                    const productTypeCount = info ? info.productTypeCount : 1;
-                                    jpyAmount = groupJpy * productTypeCount * order.quantity;
-                                } else {
-                                    jpyAmount = groupJpy * order.quantity;
-                                }
-                                totalJpyAmount += jpyAmount;
-                            }
-                            
-                            let shareForOrder = 0;
-                            if (!noIsland && islandTotalAmount > 0 && sharePerItem > 0) {
-                                if (file.type === 'single') {
-                                    shareForOrder = sharePerItem * order.quantity;
-                                } else {
-                                    if (order.isBox) {
-                                        const fileIdx = file.fileIdx.replace('ratio_', '');
-                                        const key = `${fileIdx}_${order.groupName}`;
-                                        const info = ratioGroupInfo.get(key);
-                                        const productTypeCount = info ? info.productTypeCount : 1;
-                                        shareForOrder = sharePerItem * productTypeCount * order.quantity;
-                                    } else {
-                                        shareForOrder = sharePerItem * order.quantity;
-                                    }
-                                }
-                            }
-                            
-                            const kidneyAmount = (productPrice * order.quantity) + shareForOrder;
-                            
-                            const rowData = {
-                                isTitleRow: false,
-                                product: productName,
-                                member: order.member,
-                                quantity: order.quantity,
-                                jpy: useJpy ? jpyAmount : null,
-                                price: productPrice,
-                                kidney: kidneyAmount,
-                                international: '待补',
-                                isFirstInProduct: idx === 0,
-                                fileType: file.type,
-                                fileTitle: file.title
-                            };
-                            
-                            if (!noIsland) rowData.islandShare = shareForOrder;
-                            
-                            detailRows.push(rowData);
-                        });
-                    });
-                });
-
-                const fileProductCounts = new Map();
-                detailRows.forEach(row => {
-                    if (!row.isTitleRow) {
-                        const key = `${row.fileTitle}_${row.product}`;
-                        fileProductCounts.set(key, (fileProductCounts.get(key) || 0) + 1);
-                    }
-                });
-
-                detailData = { 
-                    headers: detailHeaders, 
-                    rows: detailRows, 
-                    fileProductCounts,
-                    noIsland: noIsland,
-                    useJpy: useJpy
-                };
-
-                // ========== 构建金额汇总表 ==========
-                const memberMap = new Map();
-                detailRows.forEach(row => {
-                    if (row.isTitleRow) return;
-                    const key = row.member;
-                    memberMap.set(key, (memberMap.get(key) || 0) + row.kidney);
-                });
-
-                let summaryRows = [];
-                memberMap.forEach((totalZfb, member) => {
-                    const zfbTimes001 = Math.round(totalZfb * 0.001 * 100) / 100;
-                    const vxExtra = zfbTimes001 >= 0.01 ? zfbTimes001 : 0;
-                    const totalVx = totalZfb + vxExtra;
-                    
-                    summaryRows.push({
-                        cn: member,
-                        zfb: totalZfb,
-                        vx: totalVx
-                    });
-                });
-                
-                summaryRows.sort((a, b) => a.cn.localeCompare(b.cn));
-                
-                summaryData = { headers: ['cn', 'ZFB肾额', 'VX肾额'], rows: summaryRows };
-
-                let totalCny = 0;
-                detailRows.forEach(row => {
-                    if (!row.isTitleRow) totalCny += row.kidney;
-                });
-                
-                const islandJpy = parseFloat(islandAmount.value) || 0;
-                const orderCount = parseFloat(islandOrderCount.value);
-                const islandJpyTotal = !isNaN(orderCount) && orderCount > 0 ? islandJpy * orderCount : islandJpy;
-
-                totalCnySpan.innerHTML = `${totalCny.toFixed(2)} <span>CNY</span>`;
-                totalJpySpan.innerHTML = `${(totalJpyAmount + islandJpyTotal).toFixed(0)} <span>JPY</span>`;
-
-                if (currentTableTab === 'detail') renderDetailTable();
-                else renderSummaryTable();
-                
-                downloadCurrentBtn.disabled = false;
-            }
-
-            function renderDetailTable() {
-                if (!detailData || detailData.rows.length === 0) {
-                    tableWrapper.innerHTML = '<div style="text-align: center; padding: 40px; color: #2c5a7a;">请上传文件并点击"生成肾表"</div>';
-                    return;
-                }
-
-                let html = '<table><thead><tr>';
-                const titleText = mainTitleInput.value.trim() || '请输入该肾表名称';
-                html += `<th colspan="${detailData.headers.length}" style="background: #1e4a6a; text-align: center;">${escapeHtml(titleText)}</th>`;
-                html += '</tr><tr>';
-                detailData.headers.forEach(h => html += `<th>${escapeHtml(h)}</th>`);
-                html += '</tr></thead><tbody>';
-                
-                const productColors = ['product-color-1', 'product-color-2'];
-                let productColorIndex = 0;
-                let currentProduct = '';
-                let currentFileTitle = '';
-                
-                for (let i = 0; i < detailData.rows.length; i++) {
-                    const row = detailData.rows[i];
-                    
-                    if (row.isTitleRow) {
-                        const badgeClass = row.fileType === 'single' ? 'badge-single' : 'badge-ratio';
-                        const badgeText = row.fileType === 'single' ? '单领' : '配比';
-                        html += '<tr class="file-title-row">';
-                        html += `<td colspan="${detailData.headers.length}">`;
-                        html += `<input type="text" value="${escapeHtml(row.fileTitle)}" class="file-title-input" style="width: 300px;">`;
-                        html += `<span class="file-type-badge ${badgeClass}">${badgeText}</span>`;
-                        html += `</td>`;
-                        html += '</tr>';
-                        
-                        productColorIndex = 0;
-                        currentProduct = '';
-                        currentFileTitle = row.fileTitle;
-                    } else {
-                        html += '<tr>';
-                        
-                        if (row.isFirstInProduct) {
-                            if (row.product !== currentProduct) {
-                                currentProduct = row.product;
-                                productColorIndex++;
-                            }
-                            const key = `${currentFileTitle}_${row.product}`;
-                            const count = detailData.fileProductCounts.get(key) || 1;
-                            const colorClass = productColors[(productColorIndex - 1) % productColors.length];
-                            html += `<td rowspan="${count}" class="${colorClass}" style="font-weight: 500;">${escapeHtml(row.product)}</td>`;
-                        }
-                        
-                        html += `<td>${escapeHtml(row.member)}</td>`;
-                        html += `<td>${escapeHtml(row.quantity)}</td>`;
-                        
-                        if (detailData.useJpy) {
-                            html += `<td>${escapeHtml(row.jpy.toFixed(0))}</td>`;
-                        }
-                        
-                        html += `<td>${escapeHtml(row.price.toFixed(2))}</td>`;
-                        
-                        if (!detailData.noIsland) {
-                            html += `<td>${escapeHtml(row.islandShare.toFixed(2))}</td>`;
-                        }
-                        
-                        html += `<td>${escapeHtml(row.kidney.toFixed(2))}</td>`;
-                        html += `<td>${escapeHtml(row.international)}</td>`;
-                        html += '</tr>';
-                    }
-                }
-                
-                html += '</tbody></table>';
-                tableWrapper.innerHTML = html;
-            }
-
-            function renderSummaryTable() {
-                if (!summaryData || summaryData.rows.length === 0) {
-                    tableWrapper.innerHTML = '<div style="text-align: center; padding: 40px; color: #2c5a7a;">请上传文件并点击"生成肾表"</div>';
-                    return;
-                }
-
-                let html = '<table><thead><tr>';
-                summaryData.headers.forEach(h => html += `<th>${escapeHtml(h)}</th>`);
-                html += '</tr></thead><tbody>';
-                
-                for (const row of summaryData.rows) {
-                    html += '<tr>';
-                    html += `<td>${escapeHtml(row.cn)}</td>`;
-                    html += `<td>${escapeHtml(row.zfb.toFixed(2))}</td>`;
-                    html += `<td>${escapeHtml(row.vx.toFixed(2))}</td>`;
-                    html += '</tr>';
-                }
-                
-                html += '</tbody></table>';
-                tableWrapper.innerHTML = html;
-            }
-
-            downloadCurrentBtn.addEventListener('click', () => {
-                if (currentTableTab === 'detail') {
-                    if (!detailData) return;
-                    
-                    let excelData = [];
-                    
-                    const titleText = mainTitleInput.value.trim() || '未命名';
-                    excelData.push([`大标题: ${titleText}`]);
-                    excelData.push(detailData.headers);
-                    
-                    for (let i = 0; i < detailData.rows.length; i++) {
-                        const row = detailData.rows[i];
-                        
-                        if (row.isTitleRow) {
-                            const titleRow = new Array(detailData.headers.length).fill('');
-                            titleRow[0] = `【${row.fileTitle}】 (${row.fileType === 'single' ? '单领' : '配比'})`;
-                            excelData.push(titleRow);
-                        } else {
-                            const rowData = [
-                                row.product,
-                                row.member,
-                                row.quantity
-                            ];
-                            
-                            if (detailData.useJpy) {
-                                rowData.push(row.jpy.toFixed(0));
-                            }
-                            
-                            rowData.push(row.price.toFixed(2));
-                            
-                            if (!detailData.noIsland) {
-                                rowData.push(row.islandShare.toFixed(2));
-                            }
-                            
-                            rowData.push(row.kidney.toFixed(2));
-                            rowData.push(row.international);
-                            
-                            excelData.push(rowData);
-                        }
-                    }
-                    
-                    const wb = XLSX.utils.book_new();
-                    const ws = XLSX.utils.aoa_to_sheet(excelData);
-                    
-                    XLSX.utils.book_append_sheet(wb, ws, '明细表');
-                    XLSX.writeFile(wb, '综合明细表.xlsx');
-                    
+                    const info = ratioGroupInfo.get(key);
+                    info.boxCount += order.quantity;
+                    ratioGroupInfo.set(key, info);
                 } else {
-                    if (!summaryData) return;
-                    
-                    let excelData = [];
-                    excelData.push(summaryData.headers);
-                    
-                    summaryData.rows.forEach(row => {
-                        excelData.push([
-                            row.cn,
-                            row.zfb.toFixed(2),
-                            row.vx.toFixed(2)
-                        ]);
-                    });
-                    
-                    const wb = XLSX.utils.book_new();
-                    const ws = XLSX.utils.aoa_to_sheet(excelData);
-                    
-                    XLSX.utils.book_append_sheet(wb, ws, '金额汇总表');
-                    XLSX.writeFile(wb, '综合金额汇总表.xlsx');
+                    ratioNonBoxTotalQuantity += order.quantity;
                 }
             });
+        }
+    });
+
+    ratioGroupInfo.forEach(info => {
+        ratioBoxTotalWeight += info.boxCount * info.productTypeCount;
+    });
+
+    const denominator = singleTotalQuantity + ratioNonBoxTotalQuantity + ratioBoxTotalWeight;
+
+    let sharePerItem = 0;
+    if (!noIsland && islandTotalAmount > 0 && denominator > 0) {
+        sharePerItem = islandTotalAmount / denominator;
+    }
+
+    // ========== 构建明细表 ==========
+    let detailHeaders = ['角色', 'cn', '数量'];
+    if (useJpy) detailHeaders.push('日元');
+    detailHeaders.push('单价');
+    if (!noIsland) detailHeaders.push('岛内均摊');
+    detailHeaders.push('肾额', '国际');
+
+    let detailRows = [];
+    let totalJpyAmount = 0;
+
+    allFilesData.forEach(file => {
+        detailRows.push({
+            isTitleRow: true,
+            fileTitle: file.title,
+            fileType: file.type,
+            colspan: detailHeaders.length
+        });
+        
+        const productGroups = new Map();
+        const productOrder = [];
+        
+        file.orders.forEach(order => {
+            const productName = order.productName;
+            if (!productGroups.has(productName)) {
+                productGroups.set(productName, []);
+                productOrder.push(productName);
+            }
+            productGroups.get(productName).push(order);
+        });
+        
+        productOrder.forEach(productName => {
+            const orders = productGroups.get(productName);
+            
+            let productPrice = 0;
+            if (file.type === 'single') {
+                const key = `${file.fileIdx.replace('single_', '')}_${productName}`;
+                productPrice = singlePriceMap.get(key) || 0;
+                
+                if (productPrice === 0 && file.allProducts) {
+                    const product = file.allProducts.find(p => p.name === productName);
+                    if (product) productPrice = product.price;
+                }
+            } else {
+                for (const order of orders) {
+                    if (order.isBox) {
+                        const key = `${file.fileIdx.replace('ratio_', '')}_${order.productName}`;
+                        productPrice = ratioPriceMap.get(key) || 0;
+                        if (productPrice === 0 && file.allProducts) {
+                            const product = file.allProducts.find(p => p.isBox && p.name === order.productName);
+                            if (product) productPrice = product.price;
+                        }
+                        break;
+                    } else {
+                        for (const group of ratioFilesData[file.fileIdx.replace('ratio_', '')]?.groups || []) {
+                            const product = group.products.find(p => {
+                                const fileData = ratioFilesData[file.fileIdx.replace('ratio_', '')];
+                                if (fileData && fileData.hasDuplicateNames) {
+                                    return (p.name + group.name) === order.productName;
+                                } else {
+                                    return p.name === order.productName;
+                                }
+                            });
+                            if (product) {
+                                const key = `${file.fileIdx.replace('ratio_', '')}_${product.name}`;
+                                productPrice = ratioPriceMap.get(key) || product.price;
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            orders.forEach((order, idx) => {
+                let jpyAmount = 0;
+                if (useJpy) {
+                    const key = `${file.type}_${file.fileIdx.replace(file.type + '_', '')}_${order.groupName}`;
+                    const groupJpy = jpyMap.get(key) || 0;
+                    
+                    if (order.isBox) {
+                        const fileIdx = file.fileIdx.replace('ratio_', '');
+                        const boxKey = `${fileIdx}_${order.groupName}`;
+                        const info = ratioGroupInfo.get(boxKey);
+                        const productTypeCount = info ? info.productTypeCount : 1;
+                        jpyAmount = groupJpy * productTypeCount * order.quantity;
+                    } else {
+                        jpyAmount = groupJpy * order.quantity;
+                    }
+                    totalJpyAmount += jpyAmount;
+                }
+                
+                let shareForOrder = 0;
+                if (!noIsland && islandTotalAmount > 0 && sharePerItem > 0) {
+                    if (file.type === 'single') {
+                        shareForOrder = sharePerItem * order.quantity;
+                    } else {
+                        if (order.isBox) {
+                            const fileIdx = file.fileIdx.replace('ratio_', '');
+                            const key = `${fileIdx}_${order.groupName}`;
+                            const info = ratioGroupInfo.get(key);
+                            const productTypeCount = info ? info.productTypeCount : 1;
+                            shareForOrder = sharePerItem * productTypeCount * order.quantity;
+                        } else {
+                            shareForOrder = sharePerItem * order.quantity;
+                        }
+                    }
+                }
+                
+                const kidneyAmount = (productPrice * order.quantity) + shareForOrder;
+                
+                const rowData = {
+                    isTitleRow: false,
+                    product: productName,
+                    member: order.member,
+                    quantity: order.quantity,
+                    jpy: useJpy ? jpyAmount : null,
+                    price: productPrice,
+                    kidney: kidneyAmount,
+                    international: '待补',
+                    isFirstInProduct: idx === 0,
+                    fileType: file.type,
+                    fileTitle: file.title
+                };
+                
+                if (!noIsland) rowData.islandShare = shareForOrder;
+                
+                detailRows.push(rowData);
+            });
+        });
+    });
+
+    const fileProductCounts = new Map();
+    detailRows.forEach(row => {
+        if (!row.isTitleRow) {
+            const key = `${row.fileTitle}_${row.product}`;
+            fileProductCounts.set(key, (fileProductCounts.get(key) || 0) + 1);
+        }
+    });
+
+    detailData = { 
+        headers: detailHeaders, 
+        rows: detailRows, 
+        fileProductCounts,
+        noIsland: noIsland,
+        useJpy: useJpy
+    };
+
+    // ========== 构建金额汇总表 ==========
+    const memberMap = new Map();
+    detailRows.forEach(row => {
+        if (row.isTitleRow) return;
+        const key = row.member;
+        memberMap.set(key, (memberMap.get(key) || 0) + row.kidney);
+    });
+
+    let summaryRows = [];
+    memberMap.forEach((totalZfb, member) => {
+        const zfbTimes001 = Math.round(totalZfb * 0.001 * 100) / 100;
+        const vxExtra = zfbTimes001 >= 0.01 ? zfbTimes001 : 0;
+        const totalVx = totalZfb + vxExtra;
+        
+        summaryRows.push({
+            cn: member,
+            zfb: totalZfb,
+            vx: totalVx
+        });
+    });
+    
+    summaryRows.sort((a, b) => a.cn.localeCompare(b.cn));
+    
+    summaryData = { headers: ['cn', 'ZFB肾额', 'VX肾额'], rows: summaryRows };
+
+    let totalCny = 0;
+    detailRows.forEach(row => {
+        if (!row.isTitleRow) totalCny += row.kidney;
+    });
+    
+    const islandJpy = parseFloat(islandAmount.value) || 0;
+    const orderCount = parseFloat(islandOrderCount.value);
+    const islandJpyTotal = !isNaN(orderCount) && orderCount > 0 ? islandJpy * orderCount : islandJpy;
+
+    totalCnySpan.innerHTML = `${totalCny.toFixed(2)} <span>CNY</span>`;
+    totalJpySpan.innerHTML = `${(totalJpyAmount + islandJpyTotal).toFixed(0)} <span>JPY</span>`;
+
+// 确保渲染函数存在
+if (typeof renderDetailTable === 'function' && currentTableTab === 'detail') {
+    renderDetailTable();
+} else if (typeof renderSummaryTable === 'function' && currentTableTab === 'summary') {
+    renderSummaryTable();
+} else {
+    // 如果函数不存在，先定义它们
+    console.warn('渲染函数未定义，重新定义...');
+    window.renderDetailTable = function() {
+        if (!detailData || detailData.rows.length === 0) {
+            tableWrapper.innerHTML = '<div style="text-align: center; padding: 40px; color: #2c5a7a;">请上传文件并点击"生成肾表"</div>';
+            return;
+        }
+
+        let html = '<table><thead><tr>';
+        const titleText = mainTitleInput.value.trim() || '请输入该肾表名称';
+        html += `<th colspan="${detailData.headers.length}" style="background: #1e4a6a; text-align: center;">${escapeHtml(titleText)}</th>`;
+        html += '</tr><tr>';
+        detailData.headers.forEach(h => html += `<th>${escapeHtml(h)}</th>`);
+        html += '</tr></thead><tbody>';
+        
+        const productColors = ['product-color-1', 'product-color-2'];
+        let productColorIndex = 0;
+        let currentProduct = '';
+        let currentFileTitle = '';
+        
+        for (let i = 0; i < detailData.rows.length; i++) {
+            const row = detailData.rows[i];
+            
+            if (row.isTitleRow) {
+                const badgeClass = row.fileType === 'single' ? 'badge-single' : 'badge-ratio';
+                const badgeText = row.fileType === 'single' ? '单领' : '配比';
+                html += '<tr class="file-title-row">';
+                html += `<td colspan="${detailData.headers.length}">`;
+                html += `<input type="text" value="${escapeHtml(row.fileTitle)}" class="file-title-input" style="width: 300px;">`;
+                html += `<span class="file-type-badge ${badgeClass}">${badgeText}</span>`;
+                html += `</td>`;
+                html += '</tr>';
+                
+                productColorIndex = 0;
+                currentProduct = '';
+                currentFileTitle = row.fileTitle;
+            } else {
+                html += '<tr>';
+                
+                if (row.isFirstInProduct) {
+                    if (row.product !== currentProduct) {
+                        currentProduct = row.product;
+                        productColorIndex++;
+                    }
+                    const key = `${currentFileTitle}_${row.product}`;
+                    const count = detailData.fileProductCounts.get(key) || 1;
+                    const colorClass = productColors[(productColorIndex - 1) % productColors.length];
+                    html += `<td rowspan="${count}" class="${colorClass}" style="font-weight: 500;">${escapeHtml(row.product)}</td>`;
+                }
+                
+                html += `<td>${escapeHtml(row.member)}</td>`;
+                html += `<td>${escapeHtml(row.quantity)}</td>`;
+                
+                if (detailData.useJpy) {
+                    html += `<td>${escapeHtml(row.jpy)}</td>`;
+                }
+                
+                html += `<td>${escapeHtml(row.price.toFixed(2))}</td>`;
+                
+                if (!detailData.noIsland) {
+                    html += `<td>${escapeHtml(row.islandShare.toFixed(2))}</td>`;
+                }
+                
+                html += `<td>${escapeHtml(row.kidney.toFixed(2))}</td>`;
+                html += `<td>${escapeHtml(row.international)}</td>`;
+                html += '</tr>';
+            }
+        }
+        
+        html += '</tbody></table>';
+        tableWrapper.innerHTML = html;
+    };
+    
+    window.renderSummaryTable = function() {
+        if (!summaryData || summaryData.rows.length === 0) {
+            tableWrapper.innerHTML = '<div style="text-align: center; padding: 40px; color: #2c5a7a;">请上传文件并点击"生成肾表"</div>';
+            return;
+        }
+
+        let html = '<table><thead><tr>';
+        summaryData.headers.forEach(h => html += `<th>${escapeHtml(h)}</th>`);
+        html += '</tr></thead><tbody>';
+        
+        for (const row of summaryData.rows) {
+            html += '<tr>';
+            html += `<td>${escapeHtml(row.cn)}</td>`;
+            html += `<td>${escapeHtml(row.zfb.toFixed(2))}</td>`;
+            html += `<td>${escapeHtml(row.vx.toFixed(2))}</td>`;
+            html += '</tr>';
+        }
+        
+        html += '</tbody></table>';
+        tableWrapper.innerHTML = html;
+    };
+    
+    // 重新调用
+    if (currentTableTab === 'detail') {
+        renderDetailTable();
+    } else {
+        renderSummaryTable();
+    }
+}
+    
+    downloadCurrentBtn.disabled = false;
+}
+
+// ========== 修改 downloadCurrentBtn 事件处理 ==========
+downloadCurrentBtn.addEventListener('click', () => {
+    if (currentTableTab === 'detail') {
+        if (!detailData) return;
+        
+        // 创建工作簿
+        const wb = XLSX.utils.book_new();
+        
+        // 构建明细表数据，保持合并项的格式
+        const excelData = [];
+        
+        // 添加大标题
+        const titleText = mainTitleInput.value.trim() || '未命名';
+        excelData.push([`大标题: ${titleText}`]);
+        
+        // 添加表头
+        excelData.push(detailData.headers);
+        
+        // 记录需要合并的单元格信息
+        const merges = [];
+        let currentRow = excelData.length; // 当前行索引（从0开始，但已经有两行了）
+        
+        // 遍历所有行，构建Excel数据，同时记录合并信息
+        for (let i = 0; i < detailData.rows.length; i++) {
+            const row = detailData.rows[i];
+            
+            if (row.isTitleRow) {
+                // 文件标题行
+                const titleRow = new Array(detailData.headers.length).fill('');
+                titleRow[0] = `【${row.fileTitle}】 (${row.fileType === 'single' ? '单领' : '配比'})`;
+                excelData.push(titleRow);
+                currentRow++;
+            } else {
+                // 数据行
+                const rowData = [
+                    row.product,      // 角色
+                    row.member,       // cn
+                    row.quantity      // 数量
+                ];
+                
+                // 修改：日元列直接使用原始数值，不进行格式化
+                if (detailData.useJpy) {
+                    rowData.push(row.jpy);
+                }
+                
+                rowData.push(row.price.toFixed(2));  // 单价
+                
+                if (!detailData.noIsland) {
+                    rowData.push(row.islandShare.toFixed(2));  // 岛内均摊
+                }
+                
+                rowData.push(row.kidney.toFixed(2));  // 肾额
+                rowData.push(row.international);       // 国际
+                
+                excelData.push(rowData);
+                
+                // 如果是该制品的第一个订单，记录需要合并的单元格
+                if (row.isFirstInProduct) {
+                    const key = `${row.fileTitle}_${row.product}`;
+                    const count = detailData.fileProductCounts.get(key) || 1;
+                    
+                    if (count > 1) {
+                        // 记录合并信息：从当前行开始，合并 count 行，合并第1列（角色列）
+                        merges.push({
+                            s: { r: currentRow, c: 0 },  // 起始行、起始列
+                            e: { r: currentRow + count - 1, c: 0 }  // 结束行、结束列
+                        });
+                    }
+                }
+                
+                currentRow++;
+            }
+        }
+        
+        // 创建工作表
+        const ws = XLSX.utils.aoa_to_sheet(excelData);
+        
+        // 应用合并单元格
+        if (merges.length > 0) {
+            ws['!merges'] = merges;
+        }
+        
+        // 设置列宽
+        const cols = [
+            { wch: 20 }, // 角色列
+            { wch: 15 }, // cn列
+            { wch: 8 },  // 数量列
+        ];
+        
+        if (detailData.useJpy) {
+            cols.push({ wch: 12 }); // 日元列
+        }
+        
+        cols.push({ wch: 10 }); // 单价列
+        
+        if (!detailData.noIsland) {
+            cols.push({ wch: 12 }); // 岛内均摊列
+        }
+        
+        cols.push({ wch: 12 }); // 肾额列
+        cols.push({ wch: 8 });  // 国际列
+        
+        ws['!cols'] = cols;
+        
+        // 添加工作表到工作簿
+        XLSX.utils.book_append_sheet(wb, ws, '明细表');
+        
+        // 下载文件
+        XLSX.writeFile(wb, '综合明细表.xlsx');
+        
+    } else {
+        // 汇总表的下载保持不变
+        if (!summaryData) return;
+        
+        const excelData = [];
+        excelData.push(summaryData.headers);
+        
+        summaryData.rows.forEach(row => {
+            excelData.push([
+                row.cn,
+                row.zfb.toFixed(2),
+                row.vx.toFixed(2)
+            ]);
+        });
+        
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(excelData);
+        
+        // 设置汇总表的列宽
+        ws['!cols'] = [
+            { wch: 15 }, // cn列
+            { wch: 15 }, // ZFB肾额
+            { wch: 15 }  // VX肾额
+        ];
+        
+        XLSX.utils.book_append_sheet(wb, ws, '金额汇总表');
+        XLSX.writeFile(wb, '综合金额汇总表.xlsx');
+    }
+});
         })();
     </script>
 </body>

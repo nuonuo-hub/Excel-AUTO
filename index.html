@@ -6,6 +6,7 @@
     <title>鬼灭一锅出自动打表工具</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
+        /* 样式完全保持不变 */
         * {
             margin: 0;
             padding: 0;
@@ -1607,7 +1608,7 @@
                 }
             });
 
-            // ========== 单领文件处理 ==========
+            // ========== 单领文件处理（修改版）==========
             function handleSingleFiles(files) {
                 const fileArray = Array.from(files);
                 singleFileInfo.innerText = fileArray.map(f => f.name).join('\n');
@@ -1655,115 +1656,140 @@
                 });
             }
 
-            function parseSingleFile(rows, fileName, fileIndex) {
-                try {
-                    let typeRowIndex = -1;
-                    let typeStartCol = 0;
-                    
-                    for (let i = 0; i < rows.length; i++) {
-                        if (!rows[i] || rows[i].length === 0) continue;
-                        
-                        const cell0 = String(rows[i][0] || '').trim();
-                        if (cell0 === '种类') {
-                            typeRowIndex = i;
-                            typeStartCol = 0;
-                            break;
-                        }
-                    }
-                    
-                    if (typeRowIndex === -1) {
-                        typeRowIndex = 0;
-                    }
-
-                    const typeRow = rows[typeRowIndex];
-                    const priceRow = rows[typeRowIndex + 1] || [];
-                    
-                    const groups = [];
-                    const allProducts = [];
-                    let currentGroup = null;
-                    
-                    for (let j = typeStartCol + 1; j < typeRow.length; j++) {
-                        const cellValue = String(typeRow[j] || '').trim();
-                        if (!cellValue) continue;
-                        
-                        const price = parseFloat(String(priceRow[j] || '0').replace(/[^0-9.-]/g, ''));
-                        
-                        const isGroupMarker = price > 100 || cellValue.includes('立牌') || cellValue.includes('备忘板');
-                        
-                        if (isGroupMarker) {
-                            if (currentGroup) {
-                                groups.push(currentGroup);
-                            }
-                            currentGroup = {
-                                name: cellValue,
-                                products: [],
-                                startCol: j
-                            };
-                        } else if (currentGroup) {
-                            const productInfo = {
-                                name: cellValue,
-                                price: isNaN(price) ? 0 : price,
-                                colIndex: j
-                            };
-                            currentGroup.products.push(productInfo);
-                            allProducts.push({
-                                ...productInfo,
-                                groupName: currentGroup.name
-                            });
-                        }
-                    }
-                    
-                    if (currentGroup) {
-                        groups.push(currentGroup);
-                    }
-
-                    const colToProductMap = new Map();
-                    allProducts.forEach(product => {
-                        colToProductMap.set(product.colIndex, product);
-                    });
-
-                    const memberOrders = [];
-                    
-                    for (let i = typeRowIndex + 2; i < rows.length; i++) {
-                        const row = rows[i];
-                        if (!row || row.length === 0) continue;
-                        
-                        const memberName = String(row[typeStartCol] || '').trim();
-                        if (memberName === '' || memberName === '种类' || memberName.includes('总')) continue;
-                        
-                        for (let j = typeStartCol + 1; j < row.length; j++) {
-                            const cellValue = String(row[j] || '').trim();
-                            if (cellValue === '') continue;
-                            
-                            const product = colToProductMap.get(j);
-                            if (product) {
-                                const fullProductName = product.name + product.groupName;
-                                
-                                memberOrders.push({
-                                    member: cellValue,
-                                    productName: fullProductName,
-                                    groupName: product.groupName,
-                                    quantity: 1
-                                });
-                            }
-                        }
-                    }
-
-                    singleFilesData[fileIndex] = {
-                        fileName: fileName,
-                        title: fileName.replace(/\.[^/.]+$/, ""),
-                        type: 'single',
-                        groups: groups,
-                        allProducts: allProducts,
-                        memberOrders: memberOrders
-                    };
-
-                } catch (err) {
-                    console.error(`解析单领文件 ${fileName} 失败:`, err);
-                }
+// ========== 处理特殊格式的单领解析函数 ==========
+function parseSingleFile(rows, fileName, fileIndex) {
+    try {
+        console.log('开始解析单领文件:', fileName);
+        
+        // 1. 找到种类行
+        let typeRowIndex = -1;
+        for (let i = 0; i < rows.length; i++) {
+            if (!rows[i] || rows[i].length === 0) continue;
+            const cell0 = String(rows[i][0] || '').trim();
+            if (cell0 === '种类') {
+                typeRowIndex = i;
+                break;
             }
+        }
+        
+        if (typeRowIndex === -1) {
+            throw new Error('未找到"种类"行');
+        }
 
-            // ========== 配比文件处理 ==========
+        const typeRow = rows[typeRowIndex];
+        const priceRow = rows[typeRowIndex + 1] || [];
+        
+        console.log('种类行:', typeRow);
+        console.log('价格行:', priceRow);
+        
+        // 2. 收集制品信息
+        const products = [];
+        // 列1是第一个制品（立牌）
+        // 列2是第二个制品（文件夹）
+        for (let j = 1; j < typeRow.length; j++) {
+            const productName = String(typeRow[j] || '').trim();
+            if (!productName) continue;
+            
+            const price = parseFloat(String(priceRow[j] || '0').replace(/[^0-9.-]/g, ''));
+            
+            products.push({
+                name: productName,
+                price: isNaN(price) ? 0 : price,
+                colIndex: j
+            });
+            
+            console.log(`制品[列${j}]:`, productName, '价格:', price);
+        }
+        
+        // 3. 提取订单
+        const orders = [];
+        
+        // 从种类行+2开始遍历数据行
+        for (let i = typeRowIndex + 2; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || row.length === 0) continue;
+            
+            // 对于这种特殊格式：
+            // 列1既是成员名，也是立牌制品的购买者
+            // 列2是文件夹制品的购买者
+            
+            // 处理列1：立牌制品
+            const memberNameForProduct1 = String(row[1] || '').trim();
+            if (memberNameForProduct1 && !memberNameForProduct1.includes('总')) {
+                orders.push({
+                    member: memberNameForProduct1,  // 成员名就是购买者
+                    productName: products[0].name,   // 立牌（通）
+                    price: products[0].price,
+                    quantity: 1
+                });
+                console.log(`行${i},列1: ${memberNameForProduct1} 购买了 ${products[0].name}`);
+            }
+            
+            // 处理列2：文件夹制品
+            const memberNameForProduct2 = String(row[2] || '').trim();
+            if (memberNameForProduct2 && !memberNameForProduct2.includes('总')) {
+                orders.push({
+                    member: memberNameForProduct2,
+                    productName: products[1].name,   // 文件夹（通）
+                    price: products[1].price,
+                    quantity: 1
+                });
+                console.log(`行${i},列2: ${memberNameForProduct2} 购买了 ${products[1].name}`);
+            }
+        }
+        
+        console.log('原始订单数:', orders.length);
+        
+        // 4. 合并相同 member + productName 的订单
+        const orderMap = new Map();
+        orders.forEach(order => {
+            const key = `${order.member}|${order.productName}`;
+            if (orderMap.has(key)) {
+                orderMap.get(key).quantity += order.quantity;
+            } else {
+                orderMap.set(key, { ...order });
+            }
+        });
+        
+        const mergedOrders = Array.from(orderMap.values());
+        console.log('合并后订单数:', mergedOrders.length);
+        
+        // 5. 按制品分组统计
+        const stats = {};
+        mergedOrders.forEach(order => {
+            if (!stats[order.productName]) {
+                stats[order.productName] = 0;
+            }
+            stats[order.productName] += order.quantity;
+        });
+        console.log('制品统计:', stats);
+        
+        // 6. 构建分组结构
+        const groups = [{
+            name: '全部制品',
+            products: products
+        }];
+        
+        // 7. 保存解析结果
+        singleFilesData[fileIndex] = {
+            fileName: fileName,
+            title: fileName.replace(/\.[^/.]+$/, ""),
+            type: 'single',
+            groups: groups,
+            allProducts: products,
+            memberOrders: mergedOrders
+        };
+        
+        console.log('解析完成，保存到 singleFilesData[', fileIndex, ']');
+
+    } catch (err) {
+        console.error(`解析单领文件 ${fileName} 失败:`, err);
+        alert(`解析失败: ${err.message}`);
+        throw err;
+    }
+}
+
+            // ========== 配比文件处理（修改分组识别）==========
             function handleRatioFiles(files) {
                 const fileArray = Array.from(files);
                 ratioFileInfo.innerText = fileArray.map(f => f.name).join('\n');
@@ -1812,8 +1838,10 @@
                 });
             }
 
+            // ========== 修改后的配比解析函数（只修改分组识别）==========
             function parseRatioFile(rows, fileName, fileIndex) {
                 try {
+                    // 1. 找到种类行
                     let typeRowIndex = -1;
                     let typeStartCol = 0;
                     
@@ -1833,25 +1861,33 @@
                     }
 
                     const typeRow = rows[typeRowIndex];
-                    const priceRow = rows[typeRowIndex + 1] || [];
+                    const priceRow = rows[typeRowIndex + 1] || []; // 价格行
                     
                     const groups = [];
                     const allProducts = [];
-                    let currentGroup = null;
                     
+                    // 2. 识别分组标识列（修改点：金额过大且不包含"抱盒"）
                     const groupMarkers = [];
                     for (let j = typeStartCol + 1; j < typeRow.length; j++) {
                         const cellValue = String(typeRow[j] || '').trim();
-                        if (cellValue && (cellValue.includes('盒') || cellValue.includes('吧唧') || cellValue.includes('立牌'))) {
-                            if (!cellValue.includes('抱盒')) {
-                                groupMarkers.push({
-                                    name: cellValue,
-                                    index: j
-                                });
-                            }
+                        if (!cellValue) continue;
+                        
+                        // 获取价格
+                        const price = parseFloat(String(priceRow[j] || '0').replace(/[^0-9.-]/g, ''));
+                        
+                        // 判断是否为分组标识：金额过大（>=9999）且不包含"抱盒"
+                        const isGroupMarker = price >= 9999 && !cellValue.includes('抱盒');
+                        
+                        if (isGroupMarker) {
+                            groupMarkers.push({
+                                name: cellValue,
+                                index: j,
+                                price: price
+                            });
                         }
                     }
                     
+                    // 3. 如果没有找到分组标识，创建一个默认分组
                     if (groupMarkers.length === 0) {
                         const defaultGroup = {
                             name: '默认分组',
@@ -1883,6 +1919,7 @@
                         }
                         groups.push(defaultGroup);
                     } else {
+                        // 4. 根据分组标识构建分组（其余逻辑保持不变）
                         for (let m = 0; m < groupMarkers.length; m++) {
                             const marker = groupMarkers[m];
                             const nextMarker = groupMarkers[m + 1];
@@ -1923,16 +1960,23 @@
                         }
                     }
 
-                    const productNameSet = new Set();
-                    let hasDuplicate = false;
+                    // 5. 以下代码保持不变：处理重名、建立映射、提取订单等
+                    const productNameSet = new Map(); // 改为Map记录每个名称出现的次数
+                    const nameCount = new Map();
                     
                     groups.forEach(group => {
                         group.products.forEach(product => {
-                            if (productNameSet.has(product.name)) {
-                                hasDuplicate = true;
-                            }
-                            productNameSet.add(product.name);
+                            const key = product.name;
+                            nameCount.set(key, (nameCount.get(key) || 0) + 1);
                         });
+                    });
+
+                    // 判断是否有重名
+                    let hasDuplicate = false;
+                    nameCount.forEach((count, name) => {
+                        if (count > 1) {
+                            hasDuplicate = true;
+                        }
                     });
 
                     groups.forEach(group => {
@@ -1956,6 +2000,7 @@
                         });
                     });
 
+                    // 建立列映射
                     const colToProductMap = new Map();
                     allProducts.forEach(product => {
                         if (!product.isBox) {
@@ -1970,6 +2015,7 @@
                         }
                     });
 
+                    // 提取原始订单
                     const rawMemberOrders = [];
                     
                     for (let i = typeRowIndex + 2; i < rows.length; i++) {
@@ -2034,7 +2080,7 @@
                 }
             }
 
-            // ========== 渲染函数 ==========
+            // ========== 渲染函数（保持不变）==========
             function renderJpySettings() {
                 if (singleFilesData.length === 0 && ratioFilesData.length === 0) {
                     jpySettingsArea.innerHTML = '<div style="text-align:center; color:#2c5a7a; padding:20px;">暂无文件</div>';
@@ -2067,9 +2113,8 @@
                         
                         html += `<div class="jpy-product-list">`;
                         group.products.forEach(product => {
-                            const fullName = product.name + group.name;
                             html += `<div class="jpy-product-item">`;
-                            html += `<span>${escapeHtml(fullName)}</span>`;
+                            html += `<span>${escapeHtml(product.name)}</span>`;
                             html += `<span style="color:#2c5a7a;">${currentValue} × 数量</span>`;
                             html += `</div>`;
                         });
@@ -2229,14 +2274,13 @@
                         
                         html += `<div class="single-product-list">`;
                         group.products.forEach(product => {
-                            const fullName = product.name + group.name;
-                            const key = `${fileIdx}_${fullName}`;
+                            const key = `${fileIdx}_${product.name}`;
                             const currentPrice = singlePriceMap.get(key) || product.price;
                             
                             html += `<div class="single-product-item">`;
-                            html += `<span>${escapeHtml(fullName)}</span>`;
-                            html += `<input type="number" id="single_${fileIdx}_${fullName}" value="${currentPrice.toFixed(2)}" step="0.01" min="0">`;
-                            html += `<button onclick="applySinglePrice(${fileIdx}, '${fullName}')">✓</button>`;
+                            html += `<span>${escapeHtml(product.name)}</span>`;
+                            html += `<input type="number" id="single_${fileIdx}_${product.name}" value="${currentPrice.toFixed(2)}" step="0.01" min="0">`;
+                            html += `<button onclick="applySinglePrice(${fileIdx}, '${product.name}')">✓</button>`;
                             html += `</div>`;
                         });
                         html += `</div>`;
@@ -2262,23 +2306,22 @@
                 const group = fileData.groups.find(g => g.name === groupName);
                 
                 group.products.forEach(product => {
-                    const fullName = product.name + group.name;
-                    const key = `${fileIdx}_${fullName}`;
+                    const key = `${fileIdx}_${product.name}`;
                     singlePriceMap.set(key, newPrice);
                 });
                 
                 renderSinglePriceArea();
             };
             
-            window.applySinglePrice = function(fileIdx, fullName) {
-                const input = document.getElementById(`single_${fileIdx}_${fullName}`);
+            window.applySinglePrice = function(fileIdx, productName) {
+                const input = document.getElementById(`single_${fileIdx}_${productName}`);
                 const newPrice = parseFloat(input.value);
                 if (isNaN(newPrice) || newPrice <= 0) {
                     alert('请输入有效的单价');
                     return;
                 }
                 
-                const key = `${fileIdx}_${fullName}`;
+                const key = `${fileIdx}_${productName}`;
                 singlePriceMap.set(key, newPrice);
                 
                 renderSinglePriceArea();
@@ -2531,9 +2574,7 @@
                 singleFilesData.forEach((fileData, fileIdx) => {
                     if (!fileData) return;
                     
-                    const mergedOrders = mergeOrders(fileData.memberOrders);
-                    
-                    const orders = mergedOrders.map(order => ({
+                    const orders = fileData.memberOrders.map(order => ({
                         ...order,
                         fileIdx: `single_${fileIdx}`,
                         fileTitle: fileData.title,
@@ -2669,7 +2710,7 @@
                             productPrice = singlePriceMap.get(key) || 0;
                             
                             if (productPrice === 0 && file.allProducts) {
-                                const product = file.allProducts.find(p => (p.name + p.groupName) === productName);
+                                const product = file.allProducts.find(p => p.name === productName);
                                 if (product) productPrice = product.price;
                             }
                         } else {

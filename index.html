@@ -1,0 +1,2913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自动化打表——单领&amp;配比综合</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #e6f0fa 0%, #d1e0f0 100%);
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .top-title-bar {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 16px 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 20px rgba(26, 54, 93, 0.15);
+            border: 1px solid rgba(70, 130, 200, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .top-title-bar label {
+            color: #1a3a5e;
+            font-weight: 500;
+            font-size: 1rem;
+            white-space: nowrap;
+        }
+
+        .top-title-bar input {
+            flex: 1;
+            padding: 10px 20px;
+            border: 2px solid #b8cde0;
+            border-radius: 30px;
+            font-size: 1rem;
+            background: white;
+            transition: all 0.2s;
+        }
+
+        .top-title-bar input:focus {
+            outline: none;
+            border-color: #2c5a7a;
+            box-shadow: 0 0 0 3px rgba(44, 90, 122, 0.2);
+        }
+
+        .top-title-bar input::placeholder {
+            color: #8aa9c9;
+            font-style: italic;
+        }
+
+        .upload-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .upload-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: 0 15px 30px rgba(26, 54, 93, 0.15);
+            border: 1px solid rgba(70, 130, 200, 0.3);
+        }
+
+        .upload-card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid;
+        }
+
+        .upload-card-header.single {
+            border-bottom-color: #4aa0e0;
+        }
+
+        .upload-card-header.ratio {
+            border-bottom-color: #6ab0c0;
+        }
+
+        .upload-card-header h3 {
+            color: #1a3a5e;
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+
+        .upload-card-header .icon {
+            font-size: 1.8rem;
+        }
+
+        .upload-area {
+            background: #eaf1fa;
+            border-radius: 20px;
+            padding: 30px 20px;
+            text-align: center;
+            border: 2px dashed;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .upload-area.single {
+            border-color: #4aa0e0;
+        }
+
+        .upload-area.single:hover {
+            background: #d4e3f5;
+            border-color: #1e4a6a;
+        }
+
+        .upload-area.ratio {
+            border-color: #6ab0c0;
+        }
+
+        .upload-area.ratio:hover {
+            background: #d4e3f5;
+            border-color: #1e4a6a;
+        }
+
+        .upload-icon {
+            font-size: 2.5rem;
+            margin-bottom: 8px;
+        }
+
+        .upload-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #1a3a5e;
+            margin-bottom: 4px;
+        }
+
+        .upload-hint {
+            color: #2c5a7a;
+            font-size: 0.9rem;
+        }
+
+        .file-info {
+            color: #2c5a7a;
+            font-size: 0.9rem;
+            margin-top: 12px;
+            padding: 8px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 30px;
+            max-height: 60px;
+            overflow-y: auto;
+        }
+
+        .peidi-section {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 15px 30px rgba(26, 54, 93, 0.15);
+            border: 1px solid rgba(70, 130, 200, 0.3);
+        }
+
+        .peidi-section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3a7ca5;
+        }
+
+        .peidi-section-header h3 {
+            color: #1a3a5e;
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+
+        .peidi-section-header .icon {
+            font-size: 1.5rem;
+        }
+
+        .peidi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 8px 4px;
+        }
+
+        .group-card {
+            background: #eaf1fa;
+            border-radius: 20px;
+            padding: 16px;
+            border: 2px solid #b8cde0;
+            box-shadow: 0 4px 8px rgba(0, 30, 60, 0.1);
+            transition: all 0.2s;
+            height: fit-content;
+        }
+
+        .group-card:hover {
+            box-shadow: 0 6px 12px rgba(0, 40, 80, 0.15);
+            border-color: #3a7ca5;
+        }
+
+        .group-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #3a7ca5;
+        }
+
+        .group-title span {
+            background: #2c5a7a;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .group-title h4 {
+            color: #1a3a5e;
+            font-size: 1rem;
+            font-weight: 600;
+            word-break: break-word;
+        }
+
+        .peidi-input-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 40px;
+            border: 1px solid #b8cde0;
+        }
+
+        .peidi-input-group label {
+            color: #1a3a5e;
+            font-weight: 600;
+            min-width: 80px;
+            font-size: 0.9rem;
+        }
+
+        .peidi-input-group input {
+            flex: 1;
+            padding: 6px 12px;
+            border: 2px solid #b8cde0;
+            border-radius: 30px;
+            font-size: 0.9rem;
+        }
+
+        .product-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .product-tag {
+            background: white;
+            color: #1a3a5e;
+            padding: 4px 10px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            border: 1px solid #b8cde0;
+            font-weight: 500;
+        }
+
+        .product-tag.box-tag {
+            background: #d4e3f5;
+            border-color: #2c5a7a;
+            font-weight: 600;
+        }
+
+        .function-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .function-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: 0 15px 30px rgba(26, 54, 93, 0.15);
+            border: 1px solid rgba(70, 130, 200, 0.3);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3a7ca5;
+        }
+
+        .card-header h3 {
+            color: #1a3a5e;
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+
+        .card-header .icon {
+            font-size: 1.5rem;
+        }
+
+        /* 岛内均摊 */
+        .island-control {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .checkbox-large {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: #eaf1fa;
+            border-radius: 40px;
+        }
+
+        .checkbox-large input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: #2c5a7a;
+        }
+
+        .checkbox-large span {
+            color: #1a3a5e;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .island-content {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .input-row .input-field {
+            flex: 1;
+        }
+
+        .input-row .input-field input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #b8cde0;
+            border-radius: 30px;
+            font-size: 1rem;
+        }
+
+        .island-hint {
+            font-size: 0.9rem;
+            color: #2c5a7a;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 30px;
+            border: 1px dashed #b8cde0;
+        }
+
+        .generate-island-btn {
+            background: #2c5a7a;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #1e3e5a;
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        .generate-island-btn:hover {
+            background: #1e4a6a;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 40, 80, 0.25);
+        }
+
+        .generate-island-btn:disabled {
+            background: #a0b8cc;
+            border-color: #7e95aa;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .mode-hint {
+            margin-top: 12px;
+            padding: 10px 16px;
+            background: #fff3d9;
+            border-left: 4px solid #e6a017;
+            border-radius: 12px;
+            color: #8a6300;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* 日元设置区域 */
+        .jpy-group-area {
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .jpy-group-card {
+            background: #eaf1fa;
+            border-radius: 20px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 2px solid #b8cde0;
+        }
+
+        .jpy-group-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .jpy-group-title span {
+            background: #2c5a7a;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .jpy-group-title h4 {
+            color: #1a3a5e;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .jpy-batch-input {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 12px;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 40px;
+            border: 1px solid #b8cde0;
+        }
+
+        .jpy-batch-input label {
+            color: #1a3a5e;
+            font-weight: 600;
+            min-width: 60px;
+            font-size: 0.9rem;
+        }
+
+        .jpy-batch-input input {
+            flex: 1;
+            padding: 6px 12px;
+            border: 2px solid #b8cde0;
+            border-radius: 30px;
+        }
+
+        .jpy-batch-input button {
+            background: #2c5a7a;
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 30px;
+            cursor: pointer;
+            white-space: nowrap;
+            font-size: 0.9rem;
+        }
+
+        .jpy-product-list {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed #b8cde0;
+        }
+
+        .jpy-product-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+        }
+
+        .jpy-product-item span {
+            flex: 1;
+            color: #1a3a5e;
+            font-size: 0.9rem;
+        }
+
+        .jpy-product-item input {
+            width: 80px;
+            padding: 4px 8px;
+            border: 2px solid #b8cde0;
+            border-radius: 30px;
+            text-align: right;
+        }
+
+        .jpy-product-item button {
+            background: #2c5a7a;
+            color: white;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .single-group-area {
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .single-group-card {
+            background: #eaf1fa;
+            border-radius: 20px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 2px solid #b8cde0;
+        }
+
+        .single-group-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .single-group-title span {
+            background: #2c5a7a;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .single-group-title h4 {
+            color: #1a3a5e;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .batch-price-input {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 12px;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 40px;
+            border: 1px solid #b8cde0;
+        }
+
+        .batch-price-input label {
+            color: #1a3a5e;
+            font-weight: 600;
+            min-width: 60px;
+            font-size: 0.9rem;
+        }
+
+        .batch-price-input input {
+            flex: 1;
+            padding: 6px 12px;
+            border: 2px solid #b8cde0;
+            border-radius: 30px;
+        }
+
+        .batch-price-input button {
+            background: #2c5a7a;
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 30px;
+            cursor: pointer;
+            white-space: nowrap;
+            font-size: 0.9rem;
+        }
+
+        .single-product-list {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed #b8cde0;
+        }
+
+        .single-product-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+        }
+
+        .single-product-item span {
+            flex: 1;
+            color: #1a3a5e;
+            font-size: 0.9rem;
+        }
+
+        .single-product-item input {
+            width: 80px;
+            padding: 4px 8px;
+            border: 2px solid #b8cde0;
+            border-radius: 30px;
+            text-align: right;
+        }
+
+        .single-product-item button {
+            background: #2c5a7a;
+            color: white;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .price-toggle {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #eaf1fa;
+            border-radius: 40px;
+        }
+
+        .price-toggle label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #1a3a5e;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 6px 16px;
+            border-radius: 30px;
+        }
+
+        .price-toggle label:has(input:checked) {
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .price-toggle input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #2c5a7a;
+        }
+
+        .price-selectors {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .selector-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .selector-group label {
+            color: #1a3a5e;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-left: 12px;
+        }
+
+        .selector-group select, .selector-group input {
+            padding: 12px 16px;
+            border: 2px solid #b8cde0;
+            border-radius: 30px;
+            font-size: 0.95rem;
+            background: white;
+        }
+
+        .price-edit {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin: 16px 0;
+        }
+
+        .price-edit .input-group {
+            flex: 2;
+        }
+
+        .price-edit .input-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #b8cde0;
+            border-radius: 30px;
+            font-size: 1rem;
+        }
+
+        .batch-adjust {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #b8cde0;
+        }
+
+        .batch-title {
+            color: #1a3a5e;
+            font-weight: 600;
+            margin-bottom: 16px;
+            font-size: 1rem;
+        }
+
+        .batch-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .batch-input-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .batch-input-row input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #b8cde0;
+            border-radius: 30px;
+        }
+
+        .batch-input-row select {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #b8cde0;
+            border-radius: 30px;
+            background: white;
+        }
+
+        .batch-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .small-btn {
+            background: #2c5a7a;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #1e3e5a;
+            flex: 1;
+        }
+
+        .small-btn:hover {
+            background: #1e4a6a;
+        }
+
+        .small-btn:disabled {
+            background: #a0b8cc;
+            cursor: not-allowed;
+        }
+
+        .generate-section {
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .generate-btn {
+            background: #2c5a7a;
+            color: white;
+            border: none;
+            padding: 16px 40px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid #1e3e5a;
+            box-shadow: 0 8px 16px rgba(0, 30, 60, 0.3);
+            min-width: 300px;
+            letter-spacing: 2px;
+        }
+
+        .generate-btn:hover {
+            background: #1e4a6a;
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 40, 80, 0.4);
+        }
+
+        .generate-btn:disabled {
+            background: #a0b8cc;
+            border-color: #7e95aa;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .table-section {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: 0 20px 40px rgba(26, 54, 93, 0.2);
+            border: 1px solid rgba(70, 130, 200, 0.3);
+            margin-top: 24px;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding: 0 8px;
+        }
+
+        .table-tabs {
+            display: flex;
+            gap: 12px;
+        }
+
+        .table-tab {
+            padding: 8px 24px;
+            background: #eaf1fa;
+            border: 1px solid #b8cde0;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #1a3a5e;
+            transition: all 0.2s;
+        }
+
+        .table-tab.active {
+            background: #2c5a7a;
+            color: white;
+            border-color: #1e4a6a;
+        }
+
+        .download-btn {
+            background: #2c5a7a;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #1e3e5a;
+            box-shadow: 0 4px 8px rgba(0, 30, 60, 0.15);
+        }
+
+        .download-btn:hover {
+            background: #1e4a6a;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 40, 80, 0.25);
+        }
+
+        .download-btn:disabled {
+            background: #a0b8cc;
+            border-color: #7e95aa;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 18px;
+            background: white;
+            border: 1px solid #b8cde0;
+            max-height: 450px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background: #2c5a7a;
+            color: white;
+            font-weight: 600;
+            padding: 14px 8px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 12px 8px;
+            border-bottom: 1px solid #dae5f0;
+            color: #1a2e44;
+        }
+
+        .file-title-row {
+            background-color: #d4e3f5;
+            font-weight: 600;
+        }
+        
+        .file-title-row td {
+            background-color: #d4e3f5;
+            color: #1a3a5e;
+            font-weight: 600;
+            padding: 12px 8px;
+        }
+        
+        .file-title-row td input {
+            background: transparent;
+            border: 2px solid #2c5a7a;
+            border-radius: 30px;
+            padding: 6px 16px;
+            font-weight: 600;
+            color: #1a3a5e;
+            width: 300px;
+            font-size: 1rem;
+        }
+
+        .file-type-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-left: 12px;
+        }
+
+        .badge-single {
+            background: #4aa0e0;
+            color: white;
+        }
+
+        .badge-ratio {
+            background: #6ab0c0;
+            color: white;
+        }
+
+        .product-color-1 {
+            background-color: #e5f0ff;
+        }
+        .product-color-2 {
+            background-color: #d4e3f5;
+        }
+
+        .summary-footer {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 16px 24px;
+            box-shadow: 0 10px 20px rgba(26, 54, 93, 0.15);
+            border: 1px solid rgba(70, 130, 200, 0.3);
+            display: flex;
+            justify-content: flex-end;
+            gap: 40px;
+            margin-top: 16px;
+        }
+
+        .summary-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .summary-label {
+            color: #1a3a5e;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .summary-value {
+            background: white;
+            padding: 8px 20px;
+            border-radius: 30px;
+            border: 2px solid #b8cde0;
+            color: #1a3a5e;
+            font-weight: 700;
+            font-size: 1.2rem;
+            min-width: 160px;
+            text-align: right;
+        }
+
+        .summary-value span {
+            font-size: 0.9rem;
+            font-weight: 400;
+            color: #6d8faa;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部大标题输入 -->
+    <div class="top-title-bar">
+        <label>📌 明细表大标题</label>
+        <input type="text" id="mainTitleInput" value="" placeholder="请输入该肾表名称">
+    </div>
+
+    <!-- 双上传区域 -->
+    <div class="upload-row">
+        <!-- 单领上传区 -->
+        <div class="upload-card">
+            <div class="upload-card-header single">
+                <span class="icon">🧾</span>
+                <h3>单领文件上传</h3>
+            </div>
+            <div class="upload-area single" id="singleDropZone">
+                <div class="upload-icon">📁</div>
+                <div class="upload-title">上传单领表格</div>
+                <div class="upload-hint">支持 .xlsx, .xls, .csv (可多选)</div>
+                <input type="file" id="singleFileInput" accept=".csv,.xls,.xlsx,.xlsm" multiple style="display: none;">
+                <div class="file-info" id="singleFileInfo">未选择文件</div>
+            </div>
+        </div>
+
+        <!-- 配比上传区 -->
+        <div class="upload-card">
+            <div class="upload-card-header ratio">
+                <span class="icon">⚖️</span>
+                <h3>配比文件上传</h3>
+            </div>
+            <div class="upload-area ratio" id="ratioDropZone">
+                <div class="upload-icon">📁</div>
+                <div class="upload-title">上传配比表格</div>
+                <div class="upload-hint">支持 .xlsx, .xls, .csv (可多选)</div>
+                <input type="file" id="ratioFileInput" accept=".csv,.xls,.xlsx,.xlsm" multiple style="display: none;">
+                <div class="file-info" id="ratioFileInfo">未选择文件</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 成配数量设置区域 - 卡片网格布局 -->
+    <div class="peidi-section">
+        <div class="peidi-section-header">
+            <span class="icon">🔢</span>
+            <h3>成配数量设置</h3>
+        </div>
+        <div class="peidi-grid" id="peidiSettingsArea">
+            <div style="text-align:center; color:#2c5a7a; padding:40px; grid-column:1/-1;">请上传配比文件</div>
+        </div>
+    </div>
+
+    <!-- 功能区 - 四列布局（新增日元功能区） -->
+    <div class="function-row">
+        <!-- 岛内均摊 -->
+        <div class="function-card">
+            <div class="card-header">
+                <span class="icon">🏝️</span>
+                <h3>岛内均摊</h3>
+            </div>
+            <div class="island-control">
+                <div class="checkbox-large">
+                    <input type="checkbox" id="noIslandCheckbox">
+                    <span>无岛内</span>
+                </div>
+                <div id="islandContent" class="island-content">
+                    <div class="input-row">
+                        <div class="input-field">
+                            <input type="number" id="islandAmount" step="0.01" min="0" placeholder="请输入日元金额">
+                        </div>
+                    </div>
+                    <div class="input-row">
+                        <div class="input-field">
+                            <input type="number" id="exchangeRate" step="0.001" min="0" value="0.05" placeholder="汇率">
+                        </div>
+                    </div>
+                    <div class="input-row">
+                        <div class="input-field">
+                            <input type="number" id="islandOrderCount" step="1" min="1" placeholder="订单数量(选填)">
+                        </div>
+                    </div>
+                    <div class="island-hint">
+                        ⚡ 岛内均摊总金额 = 日元金额 × 汇率 × 订单数量<br>（若不填订单数量，则总金额 = 日元金额 × 汇率）
+                    </div>
+                </div>
+                <button class="generate-island-btn" id="generateIslandBtn" disabled>生成岛内均摊</button>
+            </div>
+            <div id="noIslandHint" class="mode-hint hidden">当前为无岛内模式，不计算岛内均摊</div>
+        </div>
+
+        <!-- 日元设置 -->
+        <div class="function-card">
+            <div class="card-header">
+                <span class="icon">💴</span>
+                <h3>日元设置</h3>
+            </div>
+            
+            <!-- 是否需要日元开关 -->
+            <div class="price-toggle">
+                <label>
+                    <input type="radio" name="jpyMode" value="off" checked> 无日元
+                </label>
+                <label>
+                    <input type="radio" name="jpyMode" value="on"> 使用日元
+                </label>
+            </div>
+
+            <div id="jpySettingsArea" class="jpy-group-area hidden">
+                <!-- 动态生成分组日元设置 -->
+            </div>
+        </div>
+
+        <!-- 单领单价修改 -->
+        <div class="function-card">
+            <div class="card-header">
+                <span class="icon">🧾</span>
+                <h3>单领单价修改</h3>
+            </div>
+            
+            <!-- 是否需要修改单价开关 -->
+            <div class="price-toggle">
+                <label>
+                    <input type="radio" name="singlePriceToggle" value="off" checked> 不修改
+                </label>
+                <label>
+                    <input type="radio" name="singlePriceToggle" value="on"> 修改单价
+                </label>
+            </div>
+
+            <div id="singlePriceArea" class="single-group-area hidden">
+                <!-- 动态生成单领文件分组批量修改区域 -->
+            </div>
+        </div>
+
+        <!-- 配比设置 -->
+        <div class="function-card">
+            <div class="card-header">
+                <span class="icon">⚖️</span>
+                <h3>配比设置</h3>
+            </div>
+            
+            <!-- 是否需要修改单价开关 -->
+            <div class="price-toggle">
+                <label>
+                    <input type="radio" name="ratioPriceToggle" value="off" checked> 不修改
+                </label>
+                <label>
+                    <input type="radio" name="ratioPriceToggle" value="on"> 修改单价
+                </label>
+            </div>
+
+            <div id="ratioPriceArea" class="hidden">
+                <!-- 配比单价修改 -->
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: #1a3a5e; margin-bottom: 12px;">🔧 单价修改</h4>
+                    <div class="price-selectors">
+                        <div class="selector-group">
+                            <label>选择文件</label>
+                            <select id="ratioFileSelect" disabled>
+                                <option>请先上传配比文件</option>
+                            </select>
+                        </div>
+
+                        <div class="selector-group">
+                            <label>选择分组</label>
+                            <select id="ratioGroupSelect" disabled>
+                                <option>请先选择文件</option>
+                            </select>
+                        </div>
+
+                        <div class="selector-group">
+                            <label>选择制品</label>
+                            <select id="ratioProductSelect" disabled>
+                                <option>请先选择分组</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="price-edit">
+                        <div class="input-group">
+                            <input type="number" id="ratioProductPrice" step="0.01" min="0" placeholder="当前单价" disabled>
+                        </div>
+                        <button class="small-btn" id="applyRatioPriceBtn" disabled>应用</button>
+                    </div>
+                </div>
+
+                <!-- 配比整体价格调整 -->
+                <div class="batch-adjust">
+                    <div class="batch-title">📊 整体价格调整</div>
+                    <div class="batch-controls">
+                        <div class="batch-input-row">
+                            <input type="number" id="ratioBatchAmount" placeholder="输入金额" step="0.01">
+                            <select id="ratioBatchScope">
+                                <option value="group">按分组</option>
+                                <option value="box">按分盒</option>
+                            </select>
+                        </div>
+                        <div class="batch-buttons">
+                            <button class="small-btn" id="ratioIncreaseBtn" disabled>+ 增加</button>
+                            <button class="small-btn" id="ratioDecreaseBtn" disabled>- 减少</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 生成肾表按钮 - 独立区域 -->
+    <div class="generate-section">
+        <button class="generate-btn" id="generateBtn" disabled>✨ 生成肾表 ✨</button>
+    </div>
+
+    <!-- 表格区域 -->
+    <div class="table-section">
+        <div class="table-header">
+            <div class="table-tabs">
+                <div class="table-tab active" id="tabDetail" onclick="switchTableTab('detail')">📋 明细表</div>
+                <div class="table-tab" id="tabSummary" onclick="switchTableTab('summary')">💰 金额汇总表</div>
+            </div>
+            <div>
+                <button class="download-btn" id="downloadCurrentBtn" disabled>下载当前表格</button>
+            </div>
+        </div>
+        <div class="table-wrapper" id="tableWrapper">
+            <div style="text-align: center; padding: 40px; color: #2c5a7a;">请上传文件并点击"生成肾表"</div>
+        </div>
+        
+        <!-- 底部汇总区域 - 新增日元汇总 -->
+        <div class="summary-footer">
+            <div class="summary-item">
+                <span class="summary-label">日元汇总</span>
+                <span class="summary-value" id="totalJpy">0 <span>JPY</span></span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">人民币汇总</span>
+                <span class="summary-value" id="totalCny">0 <span>CNY</span></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // ========== DOM 元素 ==========
+            const mainTitleInput = document.getElementById('mainTitleInput');
+            
+            // 单领上传
+            const singleFileInput = document.getElementById('singleFileInput');
+            const singleDropZone = document.getElementById('singleDropZone');
+            const singleFileInfo = document.getElementById('singleFileInfo');
+            
+            // 配比上传
+            const ratioFileInput = document.getElementById('ratioFileInput');
+            const ratioDropZone = document.getElementById('ratioDropZone');
+            const ratioFileInfo = document.getElementById('ratioFileInfo');
+            
+            const tableWrapper = document.getElementById('tableWrapper');
+            const downloadCurrentBtn = document.getElementById('downloadCurrentBtn');
+            const tabDetail = document.getElementById('tabDetail');
+            const tabSummary = document.getElementById('tabSummary');
+            const totalCnySpan = document.getElementById('totalCny');
+            const totalJpySpan = document.getElementById('totalJpy');
+            
+            // 成配数量
+            const peidiSettingsArea = document.getElementById('peidiSettingsArea');
+            const generateBtn = document.getElementById('generateBtn');
+            
+            // 岛内均摊
+            const noIslandCheckbox = document.getElementById('noIslandCheckbox');
+            const noIslandHint = document.getElementById('noIslandHint');
+            const islandContent = document.getElementById('islandContent');
+            const islandAmount = document.getElementById('islandAmount');
+            const exchangeRate = document.getElementById('exchangeRate');
+            const islandOrderCount = document.getElementById('islandOrderCount');
+            const generateIslandBtn = document.getElementById('generateIslandBtn');
+            
+            // 日元设置
+            const jpyModeRadios = document.querySelectorAll('input[name="jpyMode"]');
+            const jpySettingsArea = document.getElementById('jpySettingsArea');
+            
+            // 单领单价修改
+            const singlePriceToggle = document.querySelectorAll('input[name="singlePriceToggle"]');
+            const singlePriceArea = document.getElementById('singlePriceArea');
+            
+            // 配比单价修改
+            const ratioPriceToggle = document.querySelectorAll('input[name="ratioPriceToggle"]');
+            const ratioPriceArea = document.getElementById('ratioPriceArea');
+            const ratioFileSelect = document.getElementById('ratioFileSelect');
+            const ratioGroupSelect = document.getElementById('ratioGroupSelect');
+            const ratioProductSelect = document.getElementById('ratioProductSelect');
+            const ratioProductPrice = document.getElementById('ratioProductPrice');
+            const applyRatioPriceBtn = document.getElementById('applyRatioPriceBtn');
+            const ratioBatchAmount = document.getElementById('ratioBatchAmount');
+            const ratioBatchScope = document.getElementById('ratioBatchScope');
+            const ratioIncreaseBtn = document.getElementById('ratioIncreaseBtn');
+            const ratioDecreaseBtn = document.getElementById('ratioDecreaseBtn');
+
+            // ========== 存储数据 ==========
+            let singleFilesData = [];
+            let ratioFilesData = [];
+            
+            // 单价映射
+            let singlePriceMap = new Map();
+            let ratioPriceMap = new Map();
+            
+            // 日元映射 (key: 文件索引_分组名)
+            let jpyMap = new Map();
+            
+            // 成配数量映射
+            let groupPeidiMap = new Map();
+            
+            // 岛内均摊总金额
+            let islandTotalAmount = 0;
+            
+            // 文件是否已上传标记
+            let singleFilesLoaded = false;
+            let ratioFilesLoaded = false;
+            
+            // 是否已生成肾表
+            let kidneyGenerated = false;
+            
+            let detailData = null;
+            let summaryData = null;
+            
+            let currentTableTab = 'detail';
+
+            // ========== 辅助函数 ==========
+            function escapeHtml(unsafe) {
+                return String(unsafe)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            // ========== 事件监听 ==========
+            mainTitleInput.addEventListener('input', () => {
+                if (currentTableTab === 'detail' && detailData) {
+                    renderDetailTable();
+                }
+            });
+
+            // 监听日元模式开关
+            jpyModeRadios.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    const isOn = document.querySelector('input[name="jpyMode"]:checked').value === 'on';
+                    if (isOn) {
+                        jpySettingsArea.classList.remove('hidden');
+                        renderJpySettings();
+                    } else {
+                        jpySettingsArea.classList.add('hidden');
+                        if (kidneyGenerated) convertToTargetFormat();
+                    }
+                });
+            });
+
+            noIslandCheckbox.addEventListener('change', () => {
+                if (noIslandCheckbox.checked) {
+                    islandContent.classList.add('hidden');
+                    noIslandHint.classList.remove('hidden');
+                } else {
+                    islandContent.classList.remove('hidden');
+                    noIslandHint.classList.add('hidden');
+                }
+                
+                if (kidneyGenerated && (singleFilesData.length > 0 || ratioFilesData.length > 0)) {
+                    convertToTargetFormat();
+                }
+            });
+
+            generateIslandBtn.addEventListener('click', () => {
+                if (!kidneyGenerated) {
+                    alert('请先点击"生成肾表"');
+                    return;
+                }
+                
+                if (noIslandCheckbox.checked) {
+                    islandTotalAmount = 0;
+                } else {
+                    const amount = parseFloat(islandAmount.value) || 0;
+                    const rate = parseFloat(exchangeRate.value) || 0;
+                    const orderCount = parseFloat(islandOrderCount.value);
+                    
+                    const baseAmount = amount * rate;
+                    
+                    if (!isNaN(orderCount) && orderCount > 0) {
+                        islandTotalAmount = baseAmount * orderCount;
+                    } else {
+                        islandTotalAmount = baseAmount;
+                    }
+                }
+                
+                if (singleFilesData.length > 0 || ratioFilesData.length > 0) {
+                    convertToTargetFormat();
+                }
+            });
+
+            singlePriceToggle.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    const isOn = document.querySelector('input[name="singlePriceToggle"]:checked').value === 'on';
+                    if (isOn) {
+                        singlePriceArea.classList.remove('hidden');
+                        renderSinglePriceArea();
+                    } else {
+                        singlePriceArea.classList.add('hidden');
+                    }
+                });
+            });
+
+            ratioPriceToggle.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    const isOn = document.querySelector('input[name="ratioPriceToggle"]:checked').value === 'on';
+                    if (isOn) {
+                        ratioPriceArea.classList.remove('hidden');
+                        updateRatioFileSelect();
+                    } else {
+                        ratioPriceArea.classList.add('hidden');
+                    }
+                });
+            });
+
+            window.switchTableTab = function(tab) {
+                currentTableTab = tab;
+                if (tab === 'detail') {
+                    tabDetail.classList.add('active');
+                    tabSummary.classList.remove('active');
+                    renderDetailTable();
+                } else {
+                    tabSummary.classList.add('active');
+                    tabDetail.classList.remove('active');
+                    renderSummaryTable();
+                }
+            };
+
+            // ========== 上传事件 ==========
+            singleDropZone.addEventListener('click', () => singleFileInput.click());
+
+            singleFileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleSingleFiles(e.target.files);
+                }
+            });
+
+            singleDropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                singleDropZone.style.background = '#d4e3f5';
+            });
+
+            singleDropZone.addEventListener('dragleave', () => {
+                singleDropZone.style.background = '#eaf1fa';
+            });
+
+            singleDropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                singleDropZone.style.background = '#eaf1fa';
+                if (e.dataTransfer.files.length > 0) {
+                    singleFileInput.files = e.dataTransfer.files;
+                    handleSingleFiles(e.dataTransfer.files);
+                }
+            });
+
+            ratioDropZone.addEventListener('click', () => ratioFileInput.click());
+
+            ratioFileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleRatioFiles(e.target.files);
+                }
+            });
+
+            ratioDropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                ratioDropZone.style.background = '#d4e3f5';
+            });
+
+            ratioDropZone.addEventListener('dragleave', () => {
+                ratioDropZone.style.background = '#eaf1fa';
+            });
+
+            ratioDropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                ratioDropZone.style.background = '#eaf1fa';
+                if (e.dataTransfer.files.length > 0) {
+                    ratioFileInput.files = e.dataTransfer.files;
+                    handleRatioFiles(e.dataTransfer.files);
+                }
+            });
+
+            // ========== 单领文件处理 ==========
+            function handleSingleFiles(files) {
+                const fileArray = Array.from(files);
+                singleFileInfo.innerText = fileArray.map(f => f.name).join('\n');
+                
+                singleFilesData = [];
+                let processedCount = 0;
+                
+                fileArray.forEach((file, index) => {
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    const reader = new FileReader();
+
+                    reader.onload = (e) => {
+                        try {
+                            let data;
+                            if (ext === 'csv' || ext === 'txt') {
+                                const text = e.target.result;
+                                const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+                                data = lines.map(l => l.split(',').map(c => c.trim()));
+                            } else {
+                                const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                                data = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+                            }
+                            
+                            parseSingleFile(data, file.name, index);
+                            processedCount++;
+                            
+                            if (processedCount === fileArray.length) {
+                                singleFilesLoaded = true;
+                                renderSinglePriceArea();
+                                renderJpySettings();
+                                checkGenerateButton();
+                            }
+                        } catch (err) {
+                            console.error(`解析单领文件 ${file.name} 失败:`, err);
+                            alert(`解析单领文件 ${file.name} 失败: ${err.message}`);
+                        }
+                    };
+
+                    if (ext === 'csv' || ext === 'txt') {
+                        reader.readAsText(file, 'UTF-8');
+                    } else {
+                        reader.readAsArrayBuffer(file);
+                    }
+                });
+            }
+
+            function parseSingleFile(rows, fileName, fileIndex) {
+                try {
+                    let typeRowIndex = -1;
+                    let typeStartCol = 0;
+                    
+                    for (let i = 0; i < rows.length; i++) {
+                        if (!rows[i] || rows[i].length === 0) continue;
+                        
+                        const cell0 = String(rows[i][0] || '').trim();
+                        if (cell0 === '种类') {
+                            typeRowIndex = i;
+                            typeStartCol = 0;
+                            break;
+                        }
+                    }
+                    
+                    if (typeRowIndex === -1) {
+                        typeRowIndex = 0;
+                    }
+
+                    const typeRow = rows[typeRowIndex];
+                    const priceRow = rows[typeRowIndex + 1] || [];
+                    
+                    const groups = [];
+                    const allProducts = [];
+                    let currentGroup = null;
+                    
+                    for (let j = typeStartCol + 1; j < typeRow.length; j++) {
+                        const cellValue = String(typeRow[j] || '').trim();
+                        if (!cellValue) continue;
+                        
+                        const price = parseFloat(String(priceRow[j] || '0').replace(/[^0-9.-]/g, ''));
+                        
+                        const isGroupMarker = price > 100 || cellValue.includes('立牌') || cellValue.includes('备忘板');
+                        
+                        if (isGroupMarker) {
+                            if (currentGroup) {
+                                groups.push(currentGroup);
+                            }
+                            currentGroup = {
+                                name: cellValue,
+                                products: [],
+                                startCol: j
+                            };
+                        } else if (currentGroup) {
+                            const productInfo = {
+                                name: cellValue,
+                                price: isNaN(price) ? 0 : price,
+                                colIndex: j
+                            };
+                            currentGroup.products.push(productInfo);
+                            allProducts.push({
+                                ...productInfo,
+                                groupName: currentGroup.name
+                            });
+                        }
+                    }
+                    
+                    if (currentGroup) {
+                        groups.push(currentGroup);
+                    }
+
+                    const colToProductMap = new Map();
+                    allProducts.forEach(product => {
+                        colToProductMap.set(product.colIndex, product);
+                    });
+
+                    const memberOrders = [];
+                    
+                    for (let i = typeRowIndex + 2; i < rows.length; i++) {
+                        const row = rows[i];
+                        if (!row || row.length === 0) continue;
+                        
+                        const memberName = String(row[typeStartCol] || '').trim();
+                        if (memberName === '' || memberName === '种类' || memberName.includes('总')) continue;
+                        
+                        for (let j = typeStartCol + 1; j < row.length; j++) {
+                            const cellValue = String(row[j] || '').trim();
+                            if (cellValue === '') continue;
+                            
+                            const product = colToProductMap.get(j);
+                            if (product) {
+                                const fullProductName = product.name + product.groupName;
+                                
+                                memberOrders.push({
+                                    member: cellValue,
+                                    productName: fullProductName,
+                                    groupName: product.groupName,
+                                    quantity: 1
+                                });
+                            }
+                        }
+                    }
+
+                    singleFilesData[fileIndex] = {
+                        fileName: fileName,
+                        title: fileName.replace(/\.[^/.]+$/, ""),
+                        type: 'single',
+                        groups: groups,
+                        allProducts: allProducts,
+                        memberOrders: memberOrders
+                    };
+
+                } catch (err) {
+                    console.error(`解析单领文件 ${fileName} 失败:`, err);
+                }
+            }
+
+            // ========== 配比文件处理 ==========
+            function handleRatioFiles(files) {
+                const fileArray = Array.from(files);
+                ratioFileInfo.innerText = fileArray.map(f => f.name).join('\n');
+                
+                ratioFilesData = [];
+                let processedCount = 0;
+                
+                fileArray.forEach((file, index) => {
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    const reader = new FileReader();
+
+                    reader.onload = (e) => {
+                        try {
+                            let data;
+                            if (ext === 'csv' || ext === 'txt') {
+                                const text = e.target.result;
+                                const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+                                data = lines.map(l => l.split(',').map(c => c.trim()));
+                            } else {
+                                const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                                data = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+                            }
+                            
+                            parseRatioFile(data, file.name, index);
+                            processedCount++;
+                            
+                            if (processedCount === fileArray.length) {
+                                ratioFilesLoaded = true;
+                                renderPeidiSettings();
+                                renderJpySettings();
+                                updateRatioFileSelect();
+                                checkGenerateButton();
+                            }
+                        } catch (err) {
+                            console.error(`解析配比文件 ${file.name} 失败:`, err);
+                            alert(`解析配比文件 ${file.name} 失败: ${err.message}`);
+                        }
+                    };
+
+                    if (ext === 'csv' || ext === 'txt') {
+                        reader.readAsText(file, 'UTF-8');
+                    } else {
+                        reader.readAsArrayBuffer(file);
+                    }
+                });
+            }
+
+            function parseRatioFile(rows, fileName, fileIndex) {
+                try {
+                    let typeRowIndex = -1;
+                    let typeStartCol = 0;
+                    
+                    for (let i = 0; i < rows.length; i++) {
+                        if (!rows[i] || rows[i].length === 0) continue;
+                        
+                        const cell0 = String(rows[i][0] || '').trim();
+                        if (cell0 === '种类') {
+                            typeRowIndex = i;
+                            typeStartCol = 0;
+                            break;
+                        }
+                    }
+                    
+                    if (typeRowIndex === -1) {
+                        throw new Error('未找到"种类"行');
+                    }
+
+                    const typeRow = rows[typeRowIndex];
+                    const priceRow = rows[typeRowIndex + 1] || [];
+                    
+                    // 解析分组
+                    const groups = [];
+                    const allProducts = [];
+                    let currentGroup = null;
+                    
+                    // 先收集所有分组标识
+                    const groupMarkers = [];
+                    for (let j = typeStartCol + 1; j < typeRow.length; j++) {
+                        const cellValue = String(typeRow[j] || '').trim();
+                        if (cellValue && (cellValue.includes('盒') || cellValue.includes('吧唧') || cellValue.includes('立牌'))) {
+                            if (!cellValue.includes('抱盒')) {
+                                groupMarkers.push({
+                                    name: cellValue,
+                                    index: j
+                                });
+                            }
+                        }
+                    }
+                    
+                    // 如果没有分组标识，创建一个默认分组
+                    if (groupMarkers.length === 0) {
+                        const defaultGroup = {
+                            name: '默认分组',
+                            products: [],
+                            boxProducts: []
+                        };
+                        
+                        for (let j = typeStartCol + 1; j < typeRow.length; j++) {
+                            const cellValue = String(typeRow[j] || '').trim();
+                            if (!cellValue) continue;
+                            
+                            const price = parseFloat(String(priceRow[j] || '0').replace(/[^0-9.-]/g, ''));
+                            
+                            if (cellValue.includes('抱盒')) {
+                                defaultGroup.boxProducts.push({
+                                    name: cellValue,
+                                    price: isNaN(price) ? 0 : price,
+                                    isBox: true,
+                                    colIndex: j
+                                });
+                            } else {
+                                defaultGroup.products.push({
+                                    name: cellValue,
+                                    price: isNaN(price) ? 0 : price,
+                                    isBox: false,
+                                    colIndex: j
+                                });
+                            }
+                        }
+                        groups.push(defaultGroup);
+                    } else {
+                        // 按分组标识处理
+                        for (let m = 0; m < groupMarkers.length; m++) {
+                            const marker = groupMarkers[m];
+                            const nextMarker = groupMarkers[m + 1];
+                            
+                            const group = {
+                                name: marker.name,
+                                products: [],
+                                boxProducts: []
+                            };
+                            
+                            const startCol = marker.index + 1;
+                            const endCol = nextMarker ? nextMarker.index : typeRow.length;
+                            
+                            for (let j = startCol; j < endCol; j++) {
+                                const cellValue = String(typeRow[j] || '').trim();
+                                if (!cellValue) continue;
+                                
+                                const price = parseFloat(String(priceRow[j] || '0').replace(/[^0-9.-]/g, ''));
+                                
+                                if (cellValue.includes('抱盒')) {
+                                    group.boxProducts.push({
+                                        name: cellValue,
+                                        price: isNaN(price) ? 0 : price,
+                                        isBox: true,
+                                        colIndex: j
+                                    });
+                                } else {
+                                    group.products.push({
+                                        name: cellValue,
+                                        price: isNaN(price) ? 0 : price,
+                                        isBox: false,
+                                        colIndex: j
+                                    });
+                                }
+                            }
+                            
+                            groups.push(group);
+                        }
+                    }
+
+                    // 检查不同分组的制品名是否重复
+                    const productNameSet = new Set();
+                    let hasDuplicate = false;
+                    
+                    groups.forEach(group => {
+                        group.products.forEach(product => {
+                            if (productNameSet.has(product.name)) {
+                                hasDuplicate = true;
+                            }
+                            productNameSet.add(product.name);
+                        });
+                    });
+
+                    // 收集所有制品
+                    groups.forEach(group => {
+                        group.products.forEach(product => {
+                            allProducts.push({
+                                name: product.name,
+                                price: product.price,
+                                groupName: group.name,
+                                isBox: false,
+                                colIndex: product.colIndex
+                            });
+                        });
+                        group.boxProducts.forEach(box => {
+                            allProducts.push({
+                                name: box.name,
+                                price: box.price,
+                                groupName: group.name,
+                                isBox: true,
+                                colIndex: box.colIndex
+                            });
+                        });
+                    });
+
+                    // 建立列索引映射
+                    const colToProductMap = new Map();
+                    allProducts.forEach(product => {
+                        if (!product.isBox) {
+                            colToProductMap.set(product.colIndex, product);
+                        }
+                    });
+
+                    const boxNameToProductMap = new Map();
+                    allProducts.forEach(product => {
+                        if (product.isBox) {
+                            boxNameToProductMap.set(product.name, product);
+                        }
+                    });
+
+                    const rawMemberOrders = [];
+                    
+                    for (let i = typeRowIndex + 2; i < rows.length; i++) {
+                        const row = rows[i];
+                        if (!row || row.length === 0) continue;
+                        
+                        const seqStr = String(row[typeStartCol] || '').trim();
+                        if (seqStr === '' || isNaN(parseInt(seqStr))) continue;
+                        
+                        const seq = parseInt(seqStr);
+                        
+                        for (let j = typeStartCol + 1; j < row.length; j++) {
+                            const cellValue = String(row[j] || '').trim();
+                            if (cellValue === '') continue;
+                            
+                            const colName = String(typeRow[j] || '').trim();
+                            
+                            if (colName.includes('抱盒')) {
+                                const boxProduct = boxNameToProductMap.get(colName);
+                                if (boxProduct) {
+                                    rawMemberOrders.push({
+                                        member: cellValue,
+                                        productName: boxProduct.name,
+                                        groupName: boxProduct.groupName,
+                                        quantity: 1,
+                                        seq: seq,
+                                        isBox: true
+                                    });
+                                }
+                            } else {
+                                const product = colToProductMap.get(j);
+                                if (product) {
+                                    // 根据是否有重复制品名决定是否加分组前缀
+                                    const displayName = hasDuplicate ? product.name + product.groupName : product.name;
+                                    
+                                    rawMemberOrders.push({
+                                        member: cellValue,
+                                        productName: displayName,
+                                        originalName: product.name,
+                                        groupName: product.groupName,
+                                        quantity: 1,
+                                        seq: seq,
+                                        isBox: false
+                                    });
+                                }
+                            }
+                        }
+                    }
+
+                    ratioFilesData[fileIndex] = {
+                        fileName: fileName,
+                        title: fileName.replace(/\.[^/.]+$/, ""),
+                        type: 'ratio',
+                        groups: groups,
+                        allProducts: allProducts,
+                        rawMemberOrders: rawMemberOrders,
+                        hasDuplicateNames: hasDuplicate
+                    };
+
+                } catch (err) {
+                    console.error(`解析配比文件 ${fileName} 失败:`, err);
+                    throw err;
+                }
+            }
+
+            // ========== 渲染函数 ==========
+            function renderJpySettings() {
+                if ((singleFilesData.length === 0 && ratioFilesData.length === 0)) {
+                    jpySettingsArea.innerHTML = '<div style="text-align:center; color:#2c5a7a; padding:20px;">暂无文件</div>';
+                    return;
+                }
+
+                let html = '';
+                
+                // 单领文件的分组
+                singleFilesData.forEach((fileData, fileIdx) => {
+                    if (!fileData) return;
+                    
+                    html += `<div style="margin-bottom: 16px;">`;
+                    html += `<h4 style="color:#1a3a5e; margin-bottom:8px;">📁 ${escapeHtml(fileData.title)} (单领)</h4>`;
+                    
+                    fileData.groups.forEach(group => {
+                        const key = `single_${fileIdx}_${group.name}`;
+                        const currentValue = jpyMap.get(key) || 0;
+                        
+                        html += `<div class="jpy-group-card">`;
+                        html += `<div class="jpy-group-title">`;
+                        html += `<span>📦</span>`;
+                        html += `<h4>${escapeHtml(group.name)}</h4>`;
+                        html += `</div>`;
+                        
+                        // 分组批量设置
+                        html += `<div class="jpy-batch-input">`;
+                        html += `<label>批量</label>`;
+                        html += `<input type="number" id="jpy_batch_single_${fileIdx}_${group.name}" value="${currentValue}" step="1" min="0">`;
+                        html += `<button onclick="applyJpyBatch('single', ${fileIdx}, '${group.name}')">应用</button>`;
+                        html += `</div>`;
+                        
+                        // 显示该组下的制品
+                        html += `<div class="jpy-product-list">`;
+                        group.products.forEach(product => {
+                            const fullName = product.name + group.name;
+                            html += `<div class="jpy-product-item">`;
+                            html += `<span>${escapeHtml(fullName)}</span>`;
+                            html += `<span style="color:#2c5a7a;">${currentValue} × 数量</span>`;
+                            html += `</div>`;
+                        });
+                        html += `</div>`;
+                        
+                        html += `</div>`;
+                    });
+                    
+                    html += `</div>`;
+                });
+                
+                // 配比文件的分组
+                ratioFilesData.forEach((fileData, fileIdx) => {
+                    if (!fileData) return;
+                    
+                    html += `<div style="margin-bottom: 16px;">`;
+                    html += `<h4 style="color:#1a3a5e; margin-bottom:8px;">📁 ${escapeHtml(fileData.title)} (配比)</h4>`;
+                    
+                    fileData.groups.forEach(group => {
+                        const key = `ratio_${fileIdx}_${group.name}`;
+                        const currentValue = jpyMap.get(key) || 0;
+                        
+                        html += `<div class="jpy-group-card">`;
+                        html += `<div class="jpy-group-title">`;
+                        html += `<span>📦</span>`;
+                        html += `<h4>${escapeHtml(group.name)}</h4>`;
+                        html += `</div>`;
+                        
+                        // 分组批量设置
+                        html += `<div class="jpy-batch-input">`;
+                        html += `<label>批量</label>`;
+                        html += `<input type="number" id="jpy_batch_ratio_${fileIdx}_${group.name}" value="${currentValue}" step="1" min="0">`;
+                        html += `<button onclick="applyJpyBatch('ratio', ${fileIdx}, '${group.name}')">应用</button>`;
+                        html += `</div>`;
+                        
+                        // 显示该组下的制品
+                        html += `<div class="jpy-product-list">`;
+                        group.products.forEach(product => {
+                            html += `<div class="jpy-product-item">`;
+                            html += `<span>${escapeHtml(product.name)}</span>`;
+                            html += `<span style="color:#2c5a7a;">${currentValue} × 数量</span>`;
+                            html += `</div>`;
+                        });
+                        if (group.boxProducts && group.boxProducts.length > 0) {
+                            group.boxProducts.forEach(box => {
+                                html += `<div class="jpy-product-item">`;
+                                html += `<span>📦 ${escapeHtml(box.name)}</span>`;
+                                html += `<span style="color:#2c5a7a;">${currentValue} × 数量</span>`;
+                                html += `</div>`;
+                            });
+                        }
+                        html += `</div>`;
+                        
+                        html += `</div>`;
+                    });
+                    
+                    html += `</div>`;
+                });
+                
+                jpySettingsArea.innerHTML = html;
+            }
+
+            window.applyJpyBatch = function(type, fileIdx, groupName) {
+                const input = document.getElementById(`jpy_batch_${type}_${fileIdx}_${groupName}`);
+                const newValue = parseFloat(input.value) || 0;
+                
+                const key = `${type}_${fileIdx}_${groupName}`;
+                jpyMap.set(key, newValue);
+                
+                // 刷新显示
+                renderJpySettings();
+            };
+
+            function renderPeidiSettings() {
+                if (!ratioFilesData || ratioFilesData.length === 0) {
+                    peidiSettingsArea.innerHTML = '<div style="text-align:center; color:#2c5a7a; padding:40px; grid-column:1/-1;">暂无配比文件，请先上传</div>';
+                    return;
+                }
+
+                let html = '';
+                let hasAnyGroup = false;
+                
+                ratioFilesData.forEach((fileData, fileIdx) => {
+                    if (!fileData || !fileData.groups) return;
+                    
+                    fileData.groups.forEach(group => {
+                        if (!group) return;
+                        hasAnyGroup = true;
+                        
+                        const key = `${fileIdx}_${group.name}`;
+                        const defaultValue = 1;
+                        const currentValue = groupPeidiMap.get(key) || defaultValue;
+                        
+                        html += `<div class="group-card">`;
+                        html += `<div class="group-title">`;
+                        html += `<span>📦</span>`;
+                        html += `<h4>${escapeHtml(fileData.title)}<br>${escapeHtml(group.name)}</h4>`;
+                        html += `</div>`;
+                        
+                        html += `<div class="peidi-input-group">`;
+                        html += `<label>成配数量</label>`;
+                        html += `<input type="number" value="${currentValue}" min="1" step="1" data-file="${fileIdx}" data-group="${escapeHtml(group.name)}" class="peidi-group-input">`;
+                        html += `</div>`;
+                        
+                        html += `<div class="product-tags">`;
+                        
+                        if (group.products && group.products.length > 0) {
+                            group.products.forEach(product => {
+                                if (product && product.name) {
+                                    html += `<span class="product-tag">${escapeHtml(product.name)}</span>`;
+                                }
+                            });
+                        }
+                        
+                        if (group.boxProducts && group.boxProducts.length > 0) {
+                            group.boxProducts.forEach(box => {
+                                if (box && box.name) {
+                                    html += `<span class="product-tag box-tag">📦 ${escapeHtml(box.name)}</span>`;
+                                }
+                            });
+                        }
+                        
+                        html += `</div>`;
+                        html += `</div>`;
+                    });
+                });
+                
+                if (!hasAnyGroup) {
+                    peidiSettingsArea.innerHTML = '<div style="text-align:center; color:#2c5a7a; padding:40px; grid-column:1/-1;">已上传文件，但未识别到分组</div>';
+                } else {
+                    peidiSettingsArea.innerHTML = html;
+                }
+            }
+
+            function renderSinglePriceArea() {
+                if (singleFilesData.length === 0) {
+                    singlePriceArea.innerHTML = '<div style="text-align:center; color:#2c5a7a; padding:20px;">暂无单领文件</div>';
+                    return;
+                }
+
+                let html = '';
+                
+                singleFilesData.forEach((fileData, fileIdx) => {
+                    if (!fileData) return;
+                    
+                    html += `<div style="margin-bottom: 20px;">`;
+                    html += `<h4 style="color:#1a3a5e; margin-bottom:12px;">📁 ${escapeHtml(fileData.title)}</h4>`;
+                    
+                    fileData.groups.forEach(group => {
+                        html += `<div class="single-group-card">`;
+                        html += `<div class="single-group-title">`;
+                        html += `<span>📦</span>`;
+                        html += `<h4>${escapeHtml(group.name)}</h4>`;
+                        html += `</div>`;
+                        
+                        html += `<div class="batch-price-input">`;
+                        html += `<label>批量</label>`;
+                        html += `<input type="number" id="batch_${fileIdx}_${group.name}" placeholder="新单价" step="0.01" min="0">`;
+                        html += `<button onclick="applyBatchPrice(${fileIdx}, '${group.name}')">应用</button>`;
+                        html += `</div>`;
+                        
+                        html += `<div class="single-product-list">`;
+                        group.products.forEach(product => {
+                            const fullName = product.name + group.name;
+                            const key = `${fileIdx}_${fullName}`;
+                            const currentPrice = singlePriceMap.get(key) || product.price;
+                            
+                            html += `<div class="single-product-item">`;
+                            html += `<span>${escapeHtml(fullName)}</span>`;
+                            html += `<input type="number" id="single_${fileIdx}_${fullName}" value="${currentPrice.toFixed(2)}" step="0.01" min="0">`;
+                            html += `<button onclick="applySinglePrice(${fileIdx}, '${fullName}')">✓</button>`;
+                            html += `</div>`;
+                        });
+                        html += `</div>`;
+                        
+                        html += `</div>`;
+                    });
+                    
+                    html += `</div>`;
+                });
+                
+                singlePriceArea.innerHTML = html;
+            }
+
+            window.applyBatchPrice = function(fileIdx, groupName) {
+                const input = document.getElementById(`batch_${fileIdx}_${groupName}`);
+                const newPrice = parseFloat(input.value);
+                if (isNaN(newPrice) || newPrice <= 0) {
+                    alert('请输入有效的单价');
+                    return;
+                }
+                
+                const fileData = singleFilesData[fileIdx];
+                const group = fileData.groups.find(g => g.name === groupName);
+                
+                group.products.forEach(product => {
+                    const fullName = product.name + group.name;
+                    const key = `${fileIdx}_${fullName}`;
+                    singlePriceMap.set(key, newPrice);
+                });
+                
+                renderSinglePriceArea();
+            };
+            
+            window.applySinglePrice = function(fileIdx, fullName) {
+                const input = document.getElementById(`single_${fileIdx}_${fullName}`);
+                const newPrice = parseFloat(input.value);
+                if (isNaN(newPrice) || newPrice <= 0) {
+                    alert('请输入有效的单价');
+                    return;
+                }
+                
+                const key = `${fileIdx}_${fullName}`;
+                singlePriceMap.set(key, newPrice);
+                
+                renderSinglePriceArea();
+            };
+
+            function updateRatioFileSelect() {
+                ratioFileSelect.innerHTML = '<option value="">请选择文件</option>';
+                ratioFilesData.forEach((fileData, index) => {
+                    if (!fileData) return;
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = fileData.title;
+                    ratioFileSelect.appendChild(option);
+                });
+                ratioFileSelect.disabled = ratioFilesData.length === 0;
+                ratioIncreaseBtn.disabled = ratioFilesData.length === 0;
+                ratioDecreaseBtn.disabled = ratioFilesData.length === 0;
+            }
+
+            ratioFileSelect.addEventListener('change', () => {
+                updateRatioGroupSelect();
+            });
+
+            function updateRatioGroupSelect() {
+                const fileIdx = ratioFileSelect.value;
+                ratioGroupSelect.innerHTML = '<option value="">请选择分组</option>';
+                
+                if (!fileIdx || fileIdx === '') {
+                    ratioGroupSelect.disabled = true;
+                    ratioProductSelect.disabled = true;
+                    return;
+                }
+                
+                const fileData = ratioFilesData[fileIdx];
+                if (!fileData) return;
+                
+                fileData.groups.forEach(group => {
+                    const option = document.createElement('option');
+                    option.value = group.name;
+                    option.textContent = group.name;
+                    ratioGroupSelect.appendChild(option);
+                });
+                
+                ratioGroupSelect.disabled = false;
+            }
+
+            ratioGroupSelect.addEventListener('change', () => {
+                updateRatioProductSelect();
+            });
+
+            function updateRatioProductSelect() {
+                const fileIdx = ratioFileSelect.value;
+                const groupName = ratioGroupSelect.value;
+                
+                ratioProductSelect.innerHTML = '<option value="">请选择制品</option>';
+                
+                if (!fileIdx || !groupName || fileIdx === '' || groupName === '') {
+                    ratioProductSelect.disabled = true;
+                    return;
+                }
+                
+                const fileData = ratioFilesData[fileIdx];
+                if (!fileData) return;
+                
+                const group = fileData.groups.find(g => g.name === groupName);
+                if (!group) return;
+                
+                group.products.forEach(product => {
+                    const option = document.createElement('option');
+                    option.value = product.name;
+                    option.textContent = product.name;
+                    ratioProductSelect.appendChild(option);
+                });
+                
+                group.boxProducts.forEach(box => {
+                    const option = document.createElement('option');
+                    option.value = box.name;
+                    option.textContent = `${box.name} (抱盒)`;
+                    ratioProductSelect.appendChild(option);
+                });
+                
+                ratioProductSelect.disabled = false;
+            }
+
+            ratioProductSelect.addEventListener('change', () => {
+                const fileIdx = ratioFileSelect.value;
+                const selectedValue = ratioProductSelect.value;
+                
+                if (fileIdx && selectedValue && fileIdx !== '' && selectedValue !== '') {
+                    const fileData = ratioFilesData[fileIdx];
+                    if (!fileData) return;
+                    
+                    let price = 0;
+                    
+                    // 查找选中的制品价格
+                    for (const group of fileData.groups) {
+                        if (group.name === ratioGroupSelect.value) {
+                            const product = group.products.find(p => p.name === selectedValue);
+                            if (product) {
+                                price = product.price;
+                                break;
+                            }
+                            const box = group.boxProducts.find(b => b.name === selectedValue);
+                            if (box) {
+                                price = box.price;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    const key = `${fileIdx}_${selectedValue}`;
+                    const currentPrice = ratioPriceMap.get(key) || price;
+                    ratioProductPrice.value = currentPrice.toFixed(2);
+                    ratioProductPrice.disabled = false;
+                    applyRatioPriceBtn.disabled = false;
+                } else {
+                    ratioProductPrice.value = '';
+                    ratioProductPrice.disabled = true;
+                    applyRatioPriceBtn.disabled = true;
+                }
+            });
+
+            applyRatioPriceBtn.addEventListener('click', () => {
+                const fileIdx = ratioFileSelect.value;
+                const selectedValue = ratioProductSelect.value;
+                const newPrice = parseFloat(ratioProductPrice.value);
+                
+                if (!fileIdx || !selectedValue || fileIdx === '') {
+                    alert('请选择文件和制品');
+                    return;
+                }
+                
+                if (isNaN(newPrice) || newPrice <= 0) {
+                    alert('请输入有效的单价');
+                    return;
+                }
+                
+                const key = `${fileIdx}_${selectedValue}`;
+                ratioPriceMap.set(key, newPrice);
+                
+                alert('单价已更新');
+            });
+
+            ratioIncreaseBtn.addEventListener('click', () => {
+                applyBatchAdjust('increase');
+            });
+
+            ratioDecreaseBtn.addEventListener('click', () => {
+                applyBatchAdjust('decrease');
+            });
+
+            function applyBatchAdjust(type) {
+                const amount = parseFloat(ratioBatchAmount.value);
+                if (isNaN(amount) || amount <= 0) {
+                    alert('请输入有效的金额');
+                    return;
+                }
+                
+                const scope = ratioBatchScope.value;
+                
+                ratioFilesData.forEach((fileData, fileIdx) => {
+                    if (!fileData) return;
+                    
+                    fileData.groups.forEach(group => {
+                        if (scope === 'group') {
+                            group.products.forEach(product => {
+                                const key = `${fileIdx}_${product.name}`;
+                                const currentPrice = ratioPriceMap.get(key) || product.price;
+                                const newPrice = type === 'increase' ? currentPrice + amount : currentPrice - amount;
+                                if (newPrice > 0) ratioPriceMap.set(key, newPrice);
+                            });
+                            group.boxProducts.forEach(box => {
+                                const key = `${fileIdx}_${box.name}`;
+                                const currentPrice = ratioPriceMap.get(key) || box.price;
+                                const newPrice = type === 'increase' ? currentPrice + amount : currentPrice - amount;
+                                if (newPrice > 0) ratioPriceMap.set(key, newPrice);
+                            });
+                        } else if (scope === 'box') {
+                            group.boxProducts.forEach(box => {
+                                const key = `${fileIdx}_${box.name}`;
+                                const currentPrice = ratioPriceMap.get(key) || box.price;
+                                const newPrice = type === 'increase' ? currentPrice + amount : currentPrice - amount;
+                                if (newPrice > 0) ratioPriceMap.set(key, newPrice);
+                            });
+                        }
+                    });
+                });
+                
+                alert('批量调整完成');
+                
+                const fileIdx = ratioFileSelect.value;
+                const selectedValue = ratioProductSelect.value;
+                if (fileIdx && selectedValue && fileIdx !== '' && selectedValue !== '') {
+                    const key = `${fileIdx}_${selectedValue}`;
+                    ratioProductPrice.value = (ratioPriceMap.get(key) || 0).toFixed(2);
+                }
+            }
+
+            function checkGenerateButton() {
+                if (singleFilesLoaded || ratioFilesLoaded) {
+                    generateBtn.disabled = false;
+                }
+            }
+
+            generateBtn.addEventListener('click', () => {
+                const inputs = peidiSettingsArea.querySelectorAll('.peidi-group-input');
+                inputs.forEach(input => {
+                    const fileIdx = input.dataset.file;
+                    const groupName = input.dataset.group;
+                    const value = parseInt(input.value) || 1;
+                    const key = `${fileIdx}_${groupName}`;
+                    groupPeidiMap.set(key, value);
+                });
+                
+                kidneyGenerated = true;
+                generateIslandBtn.disabled = false;
+                convertToTargetFormat();
+            });
+
+            function filterRatioOrders(rawOrders, fileIdx) {
+                return rawOrders.filter(order => {
+                    if (order.isBox) return true;
+                    const key = `${fileIdx}_${order.groupName}`;
+                    const peidiCount = groupPeidiMap.get(key) || 1;
+                    return order.seq <= peidiCount;
+                });
+            }
+
+            function mergeOrders(orders) {
+                const map = new Map();
+                orders.forEach(order => {
+                    const key = order.isBox ? 
+                        `${order.productName}_${order.member}` : 
+                        `${order.productName}_${order.member}`;
+                    
+                    const current = map.get(key) || { ...order, quantity: 0 };
+                    current.quantity += order.quantity;
+                    map.set(key, current);
+                });
+                return Array.from(map.values());
+            }
+
+// 转换为目标格式 - 支持日元列和抱盒特殊计算
+function convertToTargetFormat() {
+    const noIsland = noIslandCheckbox.checked;
+    const useJpy = document.querySelector('input[name="jpyMode"]:checked').value === 'on';
+    
+    // 收集所有文件的数据
+    let allFilesData = [];
+    let allOrders = [];
+    
+    // 处理单领文件
+    singleFilesData.forEach((fileData, fileIdx) => {
+        if (!fileData) return;
+        
+        const mergedOrders = mergeOrders(fileData.memberOrders);
+        
+        const orders = mergedOrders.map(order => ({
+            ...order,
+            fileIdx: `single_${fileIdx}`,
+            fileTitle: fileData.title,
+            fileType: 'single',
+            groupName: order.groupName
+        }));
+        
+        allOrders.push(...orders);
+        
+        allFilesData.push({
+            fileIdx: `single_${fileIdx}`,
+            title: fileData.title,
+            type: 'single',
+            orders: orders,
+            allProducts: fileData.allProducts || [],
+            groups: fileData.groups
+        });
+    });
+    
+    // 处理配比文件
+    ratioFilesData.forEach((fileData, fileIdx) => {
+        if (!fileData) return;
+        
+        const filteredOrders = filterRatioOrders(fileData.rawMemberOrders, fileIdx);
+        const mergedOrders = mergeOrders(filteredOrders);
+        
+        const orders = mergedOrders.map(order => ({
+            ...order,
+            fileIdx: `ratio_${fileIdx}`,
+            fileTitle: fileData.title,
+            fileType: 'ratio',
+            groupName: order.groupName
+        }));
+        
+        allOrders.push(...orders);
+        
+        allFilesData.push({
+            fileIdx: `ratio_${fileIdx}`,
+            title: fileData.title,
+            type: 'ratio',
+            orders: orders,
+            allProducts: fileData.allProducts || [],
+            groups: fileData.groups
+        });
+    });
+
+    // ========== 岛内均摊计算 ==========
+    let singleTotalQuantity = 0;
+    let ratioNonBoxTotalQuantity = 0;
+    let ratioBoxTotalWeight = 0;
+    
+    const ratioGroupInfo = new Map();
+
+    allFilesData.forEach(file => {
+        if (file.type === 'single') {
+            file.orders.forEach(order => {
+                singleTotalQuantity += order.quantity;
+            });
+        } else {
+            const fileIdx = file.fileIdx.replace('ratio_', '');
+            const ratioFileData = ratioFilesData[fileIdx];
+            
+            file.orders.forEach(order => {
+                if (order.isBox) {
+                    const groupName = order.groupName;
+                    const key = `${fileIdx}_${groupName}`;
+                    
+                    if (!ratioGroupInfo.has(key)) {
+                        const group = ratioFileData.groups.find(g => g.name === groupName);
+                        const productTypeCount = group ? group.products.length : 0;
+                        ratioGroupInfo.set(key, {
+                            productTypeCount: productTypeCount,
+                            boxCount: 0
+                        });
+                    }
+                    
+                    const info = ratioGroupInfo.get(key);
+                    info.boxCount += order.quantity;
+                    ratioGroupInfo.set(key, info);
+                } else {
+                    ratioNonBoxTotalQuantity += order.quantity;
+                }
+            });
+        }
+    });
+
+    ratioGroupInfo.forEach(info => {
+        ratioBoxTotalWeight += info.boxCount * info.productTypeCount;
+    });
+
+    const denominator = singleTotalQuantity + ratioNonBoxTotalQuantity + ratioBoxTotalWeight;
+
+    let sharePerItem = 0;
+    if (!noIsland && islandTotalAmount > 0 && denominator > 0) {
+        sharePerItem = islandTotalAmount / denominator;
+    }
+
+    // ========== 构建明细表 ==========
+    let detailHeaders = ['角色', 'cn', '数量'];
+    if (useJpy) detailHeaders.push('日元');
+    detailHeaders.push('单价');
+    if (!noIsland) detailHeaders.push('岛内均摊');
+    detailHeaders.push('肾额', '国际');
+    
+    let detailRows = [];
+    let totalJpyAmount = 0;
+    
+    allFilesData.forEach(file => {
+        detailRows.push({
+            isTitleRow: true,
+            fileTitle: file.title,
+            fileType: file.type,
+            colspan: detailHeaders.length
+        });
+        
+        const productGroups = new Map();
+        const productOrder = [];
+        
+        file.orders.forEach(order => {
+            const productName = order.productName;
+            if (!productGroups.has(productName)) {
+                productGroups.set(productName, []);
+                productOrder.push(productName);
+            }
+            productGroups.get(productName).push(order);
+        });
+        
+        productOrder.forEach(productName => {
+            const orders = productGroups.get(productName);
+            
+            // 查找制品单价
+            let productPrice = 0;
+            if (file.type === 'single') {
+                const key = `${file.fileIdx.replace('single_', '')}_${productName}`;
+                productPrice = singlePriceMap.get(key) || 0;
+                
+                if (productPrice === 0 && file.allProducts) {
+                    const product = file.allProducts.find(p => (p.name + p.groupName) === productName);
+                    if (product) productPrice = product.price;
+                }
+            } else {
+                for (const order of orders) {
+                    if (order.isBox) {
+                        const key = `${file.fileIdx.replace('ratio_', '')}_${order.productName}`;
+                        productPrice = ratioPriceMap.get(key) || 0;
+                        if (productPrice === 0 && file.allProducts) {
+                            const product = file.allProducts.find(p => p.isBox && p.name === order.productName);
+                            if (product) productPrice = product.price;
+                        }
+                        break;
+                    } else {
+                        for (const group of ratioFilesData[file.fileIdx.replace('ratio_', '')]?.groups || []) {
+                            const product = group.products.find(p => {
+                                const fileData = ratioFilesData[file.fileIdx.replace('ratio_', '')];
+                                if (fileData.hasDuplicateNames) {
+                                    return (p.name + group.name) === order.productName;
+                                } else {
+                                    return p.name === order.productName;
+                                }
+                            });
+                            if (product) {
+                                const key = `${file.fileIdx.replace('ratio_', '')}_${product.name}`;
+                                productPrice = ratioPriceMap.get(key) || product.price;
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            orders.forEach((order, idx) => {
+                // 计算日元金额
+                let jpyAmount = 0;
+                if (useJpy) {
+                    const key = `${file.type}_${file.fileIdx.replace(file.type + '_', '')}_${order.groupName}`;
+                    const groupJpy = jpyMap.get(key) || 0;
+                    
+                    if (order.isBox) {
+                        // 抱盒：日元 = 用户输入金额 × 该组制品种类数 × 数量
+                        const fileIdx = file.fileIdx.replace('ratio_', '');
+                        const boxKey = `${fileIdx}_${order.groupName}`;
+                        const info = ratioGroupInfo.get(boxKey);
+                        const productTypeCount = info ? info.productTypeCount : 1;
+                        jpyAmount = groupJpy * productTypeCount * order.quantity;
+                    } else {
+                        // 非抱盒：日元 = 用户输入金额 × 数量
+                        jpyAmount = groupJpy * order.quantity;
+                    }
+                    totalJpyAmount += jpyAmount;
+                }
+                
+                // 计算岛内均摊
+                let shareForOrder = 0;
+                if (!noIsland && islandTotalAmount > 0 && sharePerItem > 0) {
+                    if (file.type === 'single') {
+                        shareForOrder = sharePerItem * order.quantity;
+                    } else {
+                        if (order.isBox) {
+                            const fileIdx = file.fileIdx.replace('ratio_', '');
+                            const key = `${fileIdx}_${order.groupName}`;
+                            const info = ratioGroupInfo.get(key);
+                            const productTypeCount = info ? info.productTypeCount : 1;
+                            shareForOrder = sharePerItem * productTypeCount * order.quantity;
+                        } else {
+                            shareForOrder = sharePerItem * order.quantity;
+                        }
+                    }
+                }
+                
+                const kidneyAmount = (productPrice * order.quantity) + shareForOrder;
+                
+                const rowData = {
+                    isTitleRow: false,
+                    product: productName,
+                    member: order.member,
+                    quantity: order.quantity,
+                    jpy: useJpy ? jpyAmount : null,
+                    price: productPrice,
+                    kidney: kidneyAmount,
+                    international: '待补',
+                    isFirstInProduct: idx === 0,
+                    fileType: file.type,
+                    fileTitle: file.title
+                };
+                
+                if (!noIsland) rowData.islandShare = shareForOrder;
+                
+                detailRows.push(rowData);
+            });
+        });
+    });
+
+    // 计算每个文件内每个制品的行数
+    const fileProductCounts = new Map();
+    detailRows.forEach(row => {
+        if (!row.isTitleRow) {
+            const key = `${row.fileTitle}_${row.product}`;
+            fileProductCounts.set(key, (fileProductCounts.get(key) || 0) + 1);
+        }
+    });
+
+    detailData = { 
+        headers: detailHeaders, 
+        rows: detailRows, 
+        fileProductCounts,
+        noIsland: noIsland,
+        useJpy: useJpy
+    };
+
+// ========== 构建金额汇总表 ==========
+const memberMap = new Map();
+detailRows.forEach(row => {
+    if (row.isTitleRow) return;
+    const key = row.member;
+    memberMap.set(key, (memberMap.get(key) || 0) + row.kidney);
+});
+
+let summaryRows = [];
+memberMap.forEach((totalZfb, member) => {
+    const zfbTimes001 = Math.round(totalZfb * 0.001 * 100) / 100;
+    const vxExtra = zfbTimes001 >= 0.01 ? zfbTimes001 : 0;
+    const totalVx = totalZfb + vxExtra;
+    
+    summaryRows.push({
+        cn: member,
+        zfb: totalZfb,
+        vx: totalVx
+    });
+});
+
+summaryRows.sort((a, b) => a.cn.localeCompare(b.cn));
+
+summaryData = { headers: ['cn', 'ZFB肾额', 'VX肾额'], rows: summaryRows };
+
+// 计算汇总金额
+let totalCny = 0;
+detailRows.forEach(row => {
+    if (!row.isTitleRow) totalCny += row.kidney;
+});
+
+// 计算岛内日元部分（不使用汇率）
+const islandJpy = parseFloat(islandAmount.value) || 0;
+const orderCount = parseFloat(islandOrderCount.value);
+const islandJpyTotal = !isNaN(orderCount) && orderCount > 0 ? islandJpy * orderCount : islandJpy;
+
+totalCnySpan.innerHTML = `${totalCny.toFixed(2)} <span>CNY</span>`;
+totalJpySpan.innerHTML = `${(totalJpyAmount + islandJpyTotal).toFixed(0)} <span>JPY</span>`;
+
+if (currentTableTab === 'detail') renderDetailTable();
+else renderSummaryTable();
+
+downloadCurrentBtn.disabled = false;
+}
+
+            function renderDetailTable() {
+                if (!detailData || detailData.rows.length === 0) {
+                    tableWrapper.innerHTML = '<div style="text-align: center; padding: 40px; color: #2c5a7a;">请上传文件并点击"生成肾表"</div>';
+                    return;
+                }
+
+                let html = '<table><thead><tr>';
+                const titleText = mainTitleInput.value.trim() || '请输入该肾表名称';
+                html += `<th colspan="${detailData.headers.length}" style="background: #1e4a6a; text-align: center;">${escapeHtml(titleText)}</th>`;
+                html += '</tr><tr>';
+                detailData.headers.forEach(h => html += `<th>${escapeHtml(h)}</th>`);
+                html += '</tr></thead><tbody>';
+                
+                const productColors = ['product-color-1', 'product-color-2'];
+                let productColorIndex = 0;
+                let currentProduct = '';
+                let currentFileTitle = '';
+                
+                for (let i = 0; i < detailData.rows.length; i++) {
+                    const row = detailData.rows[i];
+                    
+                    if (row.isTitleRow) {
+                        const badgeClass = row.fileType === 'single' ? 'badge-single' : 'badge-ratio';
+                        const badgeText = row.fileType === 'single' ? '单领' : '配比';
+                        html += '<tr class="file-title-row">';
+                        html += `<td colspan="${detailData.headers.length}">`;
+                        html += `<input type="text" value="${escapeHtml(row.fileTitle)}" class="file-title-input" style="width: 300px;">`;
+                        html += `<span class="file-type-badge ${badgeClass}">${badgeText}</span>`;
+                        html += `</td>`;
+                        html += '</tr>';
+                        
+                        productColorIndex = 0;
+                        currentProduct = '';
+                        currentFileTitle = row.fileTitle;
+                    } else {
+                        html += '<tr>';
+                        
+                        if (row.isFirstInProduct) {
+                            if (row.product !== currentProduct) {
+                                currentProduct = row.product;
+                                productColorIndex++;
+                            }
+                            const key = `${currentFileTitle}_${row.product}`;
+                            const count = detailData.fileProductCounts.get(key) || 1;
+                            const colorClass = productColors[(productColorIndex - 1) % productColors.length];
+                            html += `<td rowspan="${count}" class="${colorClass}" style="font-weight: 500;">${escapeHtml(row.product)}</td>`;
+                        }
+                        
+                        html += `<td>${escapeHtml(row.member)}</td>`;
+                        html += `<td>${escapeHtml(row.quantity)}</td>`;
+                        
+                        if (detailData.useJpy) {
+                            html += `<td>${escapeHtml(row.jpy.toFixed(0))}</td>`;
+                        }
+                        
+                        html += `<td>${escapeHtml(row.price.toFixed(2))}</td>`;
+                        
+                        if (!detailData.noIsland) {
+                            html += `<td>${escapeHtml(row.islandShare.toFixed(2))}</td>`;
+                        }
+                        
+                        html += `<td>${escapeHtml(row.kidney.toFixed(2))}</td>`;
+                        html += `<td>${escapeHtml(row.international)}</td>`;
+                        html += '</tr>';
+                    }
+                }
+                
+                html += '</tbody></table>';
+                tableWrapper.innerHTML = html;
+            }
+
+            function renderSummaryTable() {
+                if (!summaryData || summaryData.rows.length === 0) {
+                    tableWrapper.innerHTML = '<div style="text-align: center; padding: 40px; color: #2c5a7a;">请上传文件并点击"生成肾表"</div>';
+                    return;
+                }
+
+                let html = '<table><thead><tr>';
+                summaryData.headers.forEach(h => html += `<th>${escapeHtml(h)}</th>`);
+                html += '</tr></thead><tbody>';
+                
+                for (const row of summaryData.rows) {
+                    html += '<tr>';
+                    html += `<td>${escapeHtml(row.cn)}</td>`;
+                    html += `<td>${escapeHtml(row.zfb.toFixed(2))}</td>`;
+                    html += `<td>${escapeHtml(row.vx.toFixed(2))}</td>`;
+                    html += '</tr>';
+                }
+                
+                html += '</tbody></table>';
+                tableWrapper.innerHTML = html;
+            }
+
+            downloadCurrentBtn.addEventListener('click', () => {
+                if (currentTableTab === 'detail') {
+                    if (!detailData) return;
+                    
+                    let excelData = [];
+                    
+                    const titleText = mainTitleInput.value.trim() || '未命名';
+                    excelData.push([`大标题: ${titleText}`]);
+                    excelData.push(detailData.headers);
+                    
+                    for (let i = 0; i < detailData.rows.length; i++) {
+                        const row = detailData.rows[i];
+                        
+                        if (row.isTitleRow) {
+                            const titleRow = new Array(detailData.headers.length).fill('');
+                            titleRow[0] = `【${row.fileTitle}】 (${row.fileType === 'single' ? '单领' : '配比'})`;
+                            excelData.push(titleRow);
+                        } else {
+                            const rowData = [
+                                row.product,
+                                row.member,
+                                row.quantity
+                            ];
+                            
+                            if (detailData.useJpy) {
+                                rowData.push(row.jpy.toFixed(0));
+                            }
+                            
+                            rowData.push(row.price.toFixed(2));
+                            
+                            if (!detailData.noIsland) {
+                                rowData.push(row.islandShare.toFixed(2));
+                            }
+                            
+                            rowData.push(row.kidney.toFixed(2));
+                            rowData.push(row.international);
+                            
+                            excelData.push(rowData);
+                        }
+                    }
+                    
+                    const wb = XLSX.utils.book_new();
+                    const ws = XLSX.utils.aoa_to_sheet(excelData);
+                    
+                    XLSX.utils.book_append_sheet(wb, ws, '明细表');
+                    XLSX.writeFile(wb, '综合明细表.xlsx');
+                    
+                } else {
+                    if (!summaryData) return;
+                    
+                    let excelData = [];
+                    excelData.push(summaryData.headers);
+                    
+                    summaryData.rows.forEach(row => {
+                        excelData.push([
+                            row.cn,
+                            row.zfb.toFixed(2),
+                            row.vx.toFixed(2)
+                        ]);
+                    });
+                    
+                    const wb = XLSX.utils.book_new();
+                    const ws = XLSX.utils.aoa_to_sheet(excelData);
+                    
+                    XLSX.utils.book_append_sheet(wb, ws, '金额汇总表');
+                    XLSX.writeFile(wb, '综合金额汇总表.xlsx');
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

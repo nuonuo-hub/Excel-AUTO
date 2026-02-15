@@ -19,7 +19,6 @@
             padding: 16px;
         }
 
-        /* 响应式容器 */
         .container {
             max-width: 1800px;
             margin: 0 auto;
@@ -69,7 +68,6 @@
             font-style: italic;
         }
 
-        /* 响应式上传区域 */
         .upload-row {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -171,7 +169,6 @@
             word-break: break-word;
         }
 
-        /* 成配数量设置区域 - 响应式卡片网格 */
         .peidi-section {
             background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(10px);
@@ -305,7 +302,6 @@
             font-weight: 600;
         }
 
-        /* 响应式功能区 */
         .function-row {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -342,7 +338,6 @@
             font-size: 1.5rem;
         }
 
-        /* 岛内均摊响应式 */
         .island-control {
             display: flex;
             flex-direction: column;
@@ -450,7 +445,6 @@
             display: none !important;
         }
 
-        /* 日元设置区域 - 响应式 */
         .jpy-group-area {
             max-height: 350px;
             overflow-y: auto;
@@ -566,7 +560,6 @@
             font-size: 0.8rem;
         }
 
-        /* 单领单价修改区域 - 响应式 */
         .single-group-area {
             max-height: 350px;
             overflow-y: auto;
@@ -602,6 +595,7 @@
             color: #1a3a5e;
             font-size: 1rem;
             font-weight: 600;
+            word-break: break-word;
         }
 
         .batch-price-input {
@@ -873,7 +867,6 @@
             box-shadow: none;
         }
 
-        /* 表格区域 - 响应式 */
         .table-section {
             background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(10px);
@@ -1082,7 +1075,6 @@
             margin-left: 6px;
         }
 
-        /* 移动端优化 */
         @media (max-width: 480px) {
             body {
                 padding: 10px;
@@ -1121,7 +1113,6 @@
             }
         }
 
-        /* 平板优化 */
         @media (min-width: 481px) and (max-width: 768px) {
             .function-row {
                 grid-template-columns: repeat(2, 1fr);
@@ -1356,7 +1347,7 @@
                 <div style="text-align: center; padding: 40px; color: #2c5a7a;">请上传文件并点击"生成肾表"</div>
             </div>
             
-            <!-- 底部汇总区域 - 新增日元汇总 -->
+            <!-- 底部汇总区域 -->
             <div class="summary-footer">
                 <div class="summary-item">
                     <span class="summary-label">日元汇总</span>
@@ -1366,1273 +1357,6 @@
                     <span class="summary-label">人民币汇总</span>
                     <span class="summary-value" id="totalCny">0 <span>CNY</span></span>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // 此处放置完整的JavaScript代码
-        // 由于代码量较大，为了保持响应完整性，请将之前的所有JavaScript函数复制到这里
-        // 包括：事件监听、文件处理、解析函数、渲染函数、convertToTargetFormat等
-        
-        // 注意：需要包含上面修改过的convertToTargetFormat函数
-        console.log('<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>自动化打表——单领&amp;配比综合</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-        }
-        
-        body {
-            background: linear-gradient(135deg, #e6f0fa 0%, #d1e0f0 100%);
-            min-height: 100vh;
-            padding: 24px;
-        }
-
-        .top-title-bar {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 16px 24px;
-            margin-bottom: 24px;
-            box-shadow: 0 10px 20px rgba(26, 54, 93, 0.15);
-            border: 1px solid rgba(70, 130, 200, 0.3);
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .top-title-bar label {
-            color: #1a3a5e;
-            font-weight: 500;
-            font-size: 1rem;
-            white-space: nowrap;
-        }
-
-        .top-title-bar input {
-            flex: 1;
-            padding: 10px 20px;
-            border: 2px solid #b8cde0;
-            border-radius: 30px;
-            font-size: 1rem;
-            background: white;
-            transition: all 0.2s;
-        }
-
-        .top-title-bar input:focus {
-            outline: none;
-            border-color: #2c5a7a;
-            box-shadow: 0 0 0 3px rgba(44, 90, 122, 0.2);
-        }
-
-        .top-title-bar input::placeholder {
-            color: #8aa9c9;
-            font-style: italic;
-        }
-
-        .upload-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-            margin-bottom: 24px;
-        }
-
-        .upload-card {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            border-radius: 24px;
-            padding: 20px;
-            box-shadow: 0 15px 30px rgba(26, 54, 93, 0.15);
-            border: 1px solid rgba(70, 130, 200, 0.3);
-        }
-
-        .upload-card-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 16px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid;
-        }
-
-        .upload-card-header.single {
-            border-bottom-color: #4aa0e0;
-        }
-
-        .upload-card-header.ratio {
-            border-bottom-color: #6ab0c0;
-        }
-
-        .upload-card-header h3 {
-            color: #1a3a5e;
-            font-weight: 600;
-            font-size: 1.2rem;
-        }
-
-        .upload-card-header .icon {
-            font-size: 1.8rem;
-        }
-
-        .upload-area {
-            background: #eaf1fa;
-            border-radius: 20px;
-            padding: 30px 20px;
-            text-align: center;
-            border: 2px dashed;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .upload-area.single {
-            border-color: #4aa0e0;
-        }
-
-        .upload-area.single:hover {
-            background: #d4e3f5;
-            border-color: #1e4a6a;
-        }
-
-        .upload-area.ratio {
-            border-color: #6ab0c0;
-        }
-
-        .upload-area.ratio:hover {
-            background: #d4e3f5;
-            border-color: #1e4a6a;
-        }
-
-        .upload-icon {
-            font-size: 2.5rem;
-            margin-bottom: 8px;
-        }
-
-        .upload-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #1a3a5e;
-            margin-bottom: 4px;
-        }
-
-        .upload-hint {
-            color: #2c5a7a;
-            font-size: 0.9rem;
-        }
-
-        .file-info {
-            color: #2c5a7a;
-            font-size: 0.9rem;
-            margin-top: 12px;
-            padding: 8px;
-            background: rgba(255,255,255,0.5);
-            border-radius: 30px;
-            max-height: 60px;
-            overflow-y: auto;
-        }
-
-        .peidi-section {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            border-radius: 24px;
-            padding: 20px;
-            margin-bottom: 24px;
-            box-shadow: 0 15px 30px rgba(26, 54, 93, 0.15);
-            border: 1px solid rgba(70, 130, 200, 0.3);
-        }
-
-        .peidi-section-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #3a7ca5;
-        }
-
-        .peidi-section-header h3 {
-            color: #1a3a5e;
-            font-weight: 600;
-            font-size: 1.2rem;
-        }
-
-        .peidi-section-header .icon {
-            font-size: 1.5rem;
-        }
-
-        .peidi-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-            max-height: 400px;
-            overflow-y: auto;
-            padding: 8px 4px;
-        }
-
-        .group-card {
-            background: #eaf1fa;
-            border-radius: 20px;
-            padding: 16px;
-            border: 2px solid #b8cde0;
-            box-shadow: 0 4px 8px rgba(0, 30, 60, 0.1);
-            transition: all 0.2s;
-            height: fit-content;
-        }
-
-        .group-card:hover {
-            box-shadow: 0 6px 12px rgba(0, 40, 80, 0.15);
-            border-color: #3a7ca5;
-        }
-
-        .group-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 12px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #3a7ca5;
-        }
-
-        .group-title span {
-            background: #2c5a7a;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 30px;
-            font-size: 0.9rem;
-            font-weight: 600;
-        }
-
-        .group-title h4 {
-            color: #1a3a5e;
-            font-size: 1rem;
-            font-weight: 600;
-            word-break: break-word;
-        }
-
-        .peidi-input-group {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
-            background: white;
-            padding: 8px 12px;
-            border-radius: 40px;
-            border: 1px solid #b8cde0;
-        }
-
-        .peidi-input-group label {
-            color: #1a3a5e;
-            font-weight: 600;
-            min-width: 80px;
-            font-size: 0.9rem;
-        }
-
-        .peidi-input-group input {
-            flex: 1;
-            padding: 6px 12px;
-            border: 2px solid #b8cde0;
-            border-radius: 30px;
-            font-size: 0.9rem;
-        }
-
-        .product-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 8px;
-        }
-
-        .product-tag {
-            background: white;
-            color: #1a3a5e;
-            padding: 4px 10px;
-            border-radius: 30px;
-            font-size: 0.85rem;
-            border: 1px solid #b8cde0;
-            font-weight: 500;
-        }
-
-        .product-tag.box-tag {
-            background: #d4e3f5;
-            border-color: #2c5a7a;
-            font-weight: 600;
-        }
-
-        .function-row {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 24px;
-            margin-bottom: 24px;
-        }
-
-        .function-card {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            border-radius: 24px;
-            padding: 20px;
-            box-shadow: 0 15px 30px rgba(26, 54, 93, 0.15);
-            border: 1px solid rgba(70, 130, 200, 0.3);
-        }
-
-        .card-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #3a7ca5;
-        }
-
-        .card-header h3 {
-            color: #1a3a5e;
-            font-weight: 600;
-            font-size: 1.2rem;
-        }
-
-        .card-header .icon {
-            font-size: 1.5rem;
-        }
-
-        /* 岛内均摊 */
-        .island-control {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .checkbox-large {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 12px;
-            background: #eaf1fa;
-            border-radius: 40px;
-        }
-
-        .checkbox-large input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
-            accent-color: #2c5a7a;
-        }
-
-        .checkbox-large span {
-            color: #1a3a5e;
-            font-weight: 600;
-            font-size: 1rem;
-        }
-
-        .island-content {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .input-row {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        .input-row .input-field {
-            flex: 1;
-        }
-
-        .input-row .input-field input {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #b8cde0;
-            border-radius: 30px;
-            font-size: 1rem;
-        }
-
-        .island-hint {
-            font-size: 0.9rem;
-            color: #2c5a7a;
-            padding: 8px 12px;
-            background: white;
-            border-radius: 30px;
-            border: 1px dashed #b8cde0;
-        }
-
-        .generate-island-btn {
-            background: #2c5a7a;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 30px;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 1px solid #1e3e5a;
-            width: 100%;
-            margin-top: 8px;
-        }
-
-        .generate-island-btn:hover {
-            background: #1e4a6a;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0, 40, 80, 0.25);
-        }
-
-        .generate-island-btn:disabled {
-            background: #a0b8cc;
-            border-color: #7e95aa;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .mode-hint {
-            margin-top: 12px;
-            padding: 10px 16px;
-            background: #fff3d9;
-            border-left: 4px solid #e6a017;
-            border-radius: 12px;
-            color: #8a6300;
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        /* 日元设置区域 */
-        .jpy-group-area {
-            max-height: 300px;
-            overflow-y: auto;
-            padding-right: 8px;
-        }
-
-        .jpy-group-card {
-            background: #eaf1fa;
-            border-radius: 20px;
-            padding: 16px;
-            margin-bottom: 16px;
-            border: 2px solid #b8cde0;
-        }
-
-        .jpy-group-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-
-        .jpy-group-title span {
-            background: #2c5a7a;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 30px;
-            font-size: 0.9rem;
-            font-weight: 600;
-        }
-
-        .jpy-group-title h4 {
-            color: #1a3a5e;
-            font-size: 1rem;
-            font-weight: 600;
-        }
-
-        .jpy-batch-input {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            margin-bottom: 12px;
-            background: white;
-            padding: 8px 12px;
-            border-radius: 40px;
-            border: 1px solid #b8cde0;
-        }
-
-        .jpy-batch-input label {
-            color: #1a3a5e;
-            font-weight: 600;
-            min-width: 60px;
-            font-size: 0.9rem;
-        }
-
-        .jpy-batch-input input {
-            flex: 1;
-            padding: 6px 12px;
-            border: 2px solid #b8cde0;
-            border-radius: 30px;
-        }
-
-        .jpy-batch-input button {
-            background: #2c5a7a;
-            color: white;
-            border: none;
-            padding: 6px 16px;
-            border-radius: 30px;
-            cursor: pointer;
-            white-space: nowrap;
-            font-size: 0.9rem;
-        }
-
-        .jpy-product-list {
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px dashed #b8cde0;
-        }
-
-        .jpy-product-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 6px 0;
-        }
-
-        .jpy-product-item span {
-            flex: 1;
-            color: #1a3a5e;
-            font-size: 0.9rem;
-        }
-
-        .jpy-product-item input {
-            width: 80px;
-            padding: 4px 8px;
-            border: 2px solid #b8cde0;
-            border-radius: 30px;
-            text-align: right;
-        }
-
-        .jpy-product-item button {
-            background: #2c5a7a;
-            color: white;
-            border: none;
-            padding: 4px 12px;
-            border-radius: 30px;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
-
-        .single-group-area {
-            max-height: 400px;
-            overflow-y: auto;
-            padding-right: 8px;
-        }
-
-        .single-group-card {
-            background: #eaf1fa;
-            border-radius: 20px;
-            padding: 16px;
-            margin-bottom: 16px;
-            border: 2px solid #b8cde0;
-        }
-
-        .single-group-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-
-        .single-group-title span {
-            background: #2c5a7a;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 30px;
-            font-size: 0.9rem;
-            font-weight: 600;
-        }
-
-        .single-group-title h4 {
-            color: #1a3a5e;
-            font-size: 1rem;
-            font-weight: 600;
-        }
-
-        .batch-price-input {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            margin-bottom: 12px;
-            background: white;
-            padding: 8px 12px;
-            border-radius: 40px;
-            border: 1px solid #b8cde0;
-        }
-
-        .batch-price-input label {
-            color: #1a3a5e;
-            font-weight: 600;
-            min-width: 60px;
-            font-size: 0.9rem;
-        }
-
-        .batch-price-input input {
-            flex: 1;
-            padding: 6px 12px;
-            border: 2px solid #b8cde0;
-            border-radius: 30px;
-        }
-
-        .batch-price-input button {
-            background: #2c5a7a;
-            color: white;
-            border: none;
-            padding: 6px 16px;
-            border-radius: 30px;
-            cursor: pointer;
-            white-space: nowrap;
-            font-size: 0.9rem;
-        }
-
-        .single-product-list {
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px dashed #b8cde0;
-        }
-
-        .single-product-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 6px 0;
-        }
-
-        .single-product-item span {
-            flex: 1;
-            color: #1a3a5e;
-            font-size: 0.9rem;
-        }
-
-        .single-product-item input {
-            width: 80px;
-            padding: 4px 8px;
-            border: 2px solid #b8cde0;
-            border-radius: 30px;
-            text-align: right;
-        }
-
-        .single-product-item button {
-            background: #2c5a7a;
-            color: white;
-            border: none;
-            padding: 4px 12px;
-            border-radius: 30px;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
-
-        .price-toggle {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 20px;
-            padding: 10px;
-            background: #eaf1fa;
-            border-radius: 40px;
-        }
-
-        .price-toggle label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #1a3a5e;
-            font-weight: 600;
-            cursor: pointer;
-            padding: 6px 16px;
-            border-radius: 30px;
-        }
-
-        .price-toggle label:has(input:checked) {
-            background: white;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        .price-toggle input[type="radio"] {
-            width: 18px;
-            height: 18px;
-            accent-color: #2c5a7a;
-        }
-
-        .price-selectors {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            margin-bottom: 20px;
-        }
-
-        .selector-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .selector-group label {
-            color: #1a3a5e;
-            font-weight: 600;
-            font-size: 0.9rem;
-            margin-left: 12px;
-        }
-
-        .selector-group select, .selector-group input {
-            padding: 12px 16px;
-            border: 2px solid #b8cde0;
-            border-radius: 30px;
-            font-size: 0.95rem;
-            background: white;
-        }
-
-        .price-edit {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            margin: 16px 0;
-        }
-
-        .price-edit .input-group {
-            flex: 2;
-        }
-
-        .price-edit .input-group input {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #b8cde0;
-            border-radius: 30px;
-            font-size: 1rem;
-        }
-
-        .batch-adjust {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 2px solid #b8cde0;
-        }
-
-        .batch-title {
-            color: #1a3a5e;
-            font-weight: 600;
-            margin-bottom: 16px;
-            font-size: 1rem;
-        }
-
-        .batch-controls {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .batch-input-row {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        .batch-input-row input {
-            flex: 1;
-            padding: 12px 16px;
-            border: 2px solid #b8cde0;
-            border-radius: 30px;
-        }
-
-        .batch-input-row select {
-            flex: 1;
-            padding: 12px 16px;
-            border: 2px solid #b8cde0;
-            border-radius: 30px;
-            background: white;
-        }
-
-        .batch-buttons {
-            display: flex;
-            gap: 8px;
-        }
-
-        .small-btn {
-            background: #2c5a7a;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 30px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 1px solid #1e3e5a;
-            flex: 1;
-        }
-
-        .small-btn:hover {
-            background: #1e4a6a;
-        }
-
-        .small-btn:disabled {
-            background: #a0b8cc;
-            cursor: not-allowed;
-        }
-
-        .generate-section {
-            margin-bottom: 24px;
-            text-align: center;
-        }
-
-        .generate-btn {
-            background: #2c5a7a;
-            color: white;
-            border: none;
-            padding: 16px 40px;
-            border-radius: 50px;
-            font-weight: 700;
-            font-size: 1.3rem;
-            cursor: pointer;
-            transition: all 0.3s;
-            border: 1px solid #1e3e5a;
-            box-shadow: 0 8px 16px rgba(0, 30, 60, 0.3);
-            min-width: 300px;
-            letter-spacing: 2px;
-        }
-
-        .generate-btn:hover {
-            background: #1e4a6a;
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(0, 40, 80, 0.4);
-        }
-
-        .generate-btn:disabled {
-            background: #a0b8cc;
-            border-color: #7e95aa;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .table-section {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            border-radius: 24px;
-            padding: 20px;
-            box-shadow: 0 20px 40px rgba(26, 54, 93, 0.2);
-            border: 1px solid rgba(70, 130, 200, 0.3);
-            margin-top: 24px;
-        }
-
-        .table-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-            padding: 0 8px;
-        }
-
-        .table-tabs {
-            display: flex;
-            gap: 12px;
-        }
-
-        .table-tab {
-            padding: 8px 24px;
-            background: #eaf1fa;
-            border: 1px solid #b8cde0;
-            border-radius: 30px;
-            cursor: pointer;
-            font-weight: 600;
-            color: #1a3a5e;
-            transition: all 0.2s;
-        }
-
-        .table-tab.active {
-            background: #2c5a7a;
-            color: white;
-            border-color: #1e4a6a;
-        }
-
-        .download-btn {
-            background: #2c5a7a;
-            color: white;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 30px;
-            font-weight: 600;
-            font-size: 0.95rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 1px solid #1e3e5a;
-            box-shadow: 0 4px 8px rgba(0, 30, 60, 0.15);
-        }
-
-        .download-btn:hover {
-            background: #1e4a6a;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0, 40, 80, 0.25);
-        }
-
-        .download-btn:disabled {
-            background: #a0b8cc;
-            border-color: #7e95aa;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .table-wrapper {
-            overflow-x: auto;
-            border-radius: 18px;
-            background: white;
-            border: 1px solid #b8cde0;
-            max-height: 450px;
-            overflow-y: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.95rem;
-        }
-
-        th {
-            background: #2c5a7a;
-            color: white;
-            font-weight: 600;
-            padding: 14px 8px;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            white-space: nowrap;
-        }
-
-        td {
-            padding: 12px 8px;
-            border-bottom: 1px solid #dae5f0;
-            color: #1a2e44;
-        }
-
-        .file-title-row {
-            background-color: #d4e3f5;
-            font-weight: 600;
-        }
-        
-        .file-title-row td {
-            background-color: #d4e3f5;
-            color: #1a3a5e;
-            font-weight: 600;
-            padding: 12px 8px;
-        }
-        
-        .file-title-row td input {
-            background: transparent;
-            border: 2px solid #2c5a7a;
-            border-radius: 30px;
-            padding: 6px 16px;
-            font-weight: 600;
-            color: #1a3a5e;
-            width: 300px;
-            font-size: 1rem;
-        }
-
-        .file-type-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 30px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            margin-left: 12px;
-        }
-
-        .badge-single {
-            background: #4aa0e0;
-            color: white;
-        }
-
-        .badge-ratio {
-            background: #6ab0c0;
-            color: white;
-        }
-
-        .product-color-1 {
-            background-color: #e5f0ff;
-        }
-        .product-color-2 {
-            background-color: #d4e3f5;
-        }
-
-        .summary-footer {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 16px 24px;
-            box-shadow: 0 10px 20px rgba(26, 54, 93, 0.15);
-            border: 1px solid rgba(70, 130, 200, 0.3);
-            display: flex;
-            justify-content: flex-end;
-            gap: 40px;
-            margin-top: 16px;
-        }
-
-        .summary-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .summary-label {
-            color: #1a3a5e;
-            font-weight: 600;
-            font-size: 1rem;
-        }
-
-        .summary-value {
-            background: white;
-            padding: 8px 20px;
-            border-radius: 30px;
-            border: 2px solid #b8cde0;
-            color: #1a3a5e;
-            font-weight: 700;
-            font-size: 1.2rem;
-            min-width: 160px;
-            text-align: right;
-        }
-
-        .summary-value span {
-            font-size: 0.9rem;
-            font-weight: 400;
-            color: #6d8faa;
-            margin-left: 8px;
-        }
-    </style>
-</head>
-<body>
-    <!-- 顶部大标题输入 -->
-    <div class="top-title-bar">
-        <label>📌 明细表大标题</label>
-        <input type="text" id="mainTitleInput" value="" placeholder="请输入该肾表名称">
-    </div>
-
-    <!-- 双上传区域 -->
-    <div class="upload-row">
-        <!-- 单领上传区 -->
-        <div class="upload-card">
-            <div class="upload-card-header single">
-                <span class="icon">🧾</span>
-                <h3>单领文件上传</h3>
-            </div>
-            <div class="upload-area single" id="singleDropZone">
-                <div class="upload-icon">📁</div>
-                <div class="upload-title">上传单领表格</div>
-                <div class="upload-hint">支持 .xlsx, .xls, .csv (可多选)</div>
-                <input type="file" id="singleFileInput" accept=".csv,.xls,.xlsx,.xlsm" multiple style="display: none;">
-                <div class="file-info" id="singleFileInfo">未选择文件</div>
-            </div>
-        </div>
-
-        <!-- 配比上传区 -->
-        <div class="upload-card">
-            <div class="upload-card-header ratio">
-                <span class="icon">⚖️</span>
-                <h3>配比文件上传</h3>
-            </div>
-            <div class="upload-area ratio" id="ratioDropZone">
-                <div class="upload-icon">📁</div>
-                <div class="upload-title">上传配比表格</div>
-                <div class="upload-hint">支持 .xlsx, .xls, .csv (可多选)</div>
-                <input type="file" id="ratioFileInput" accept=".csv,.xls,.xlsx,.xlsm" multiple style="display: none;">
-                <div class="file-info" id="ratioFileInfo">未选择文件</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 成配数量设置区域 - 卡片网格布局 -->
-    <div class="peidi-section">
-        <div class="peidi-section-header">
-            <span class="icon">🔢</span>
-            <h3>成配数量设置</h3>
-        </div>
-        <div class="peidi-grid" id="peidiSettingsArea">
-            <div style="text-align:center; color:#2c5a7a; padding:40px; grid-column:1/-1;">请上传配比文件</div>
-        </div>
-    </div>
-
-    <!-- 功能区 - 四列布局（新增日元功能区） -->
-    <div class="function-row">
-        <!-- 岛内均摊 -->
-        <div class="function-card">
-            <div class="card-header">
-                <span class="icon">🏝️</span>
-                <h3>岛内均摊</h3>
-            </div>
-            <div class="island-control">
-                <div class="checkbox-large">
-                    <input type="checkbox" id="noIslandCheckbox">
-                    <span>无岛内</span>
-                </div>
-                <div id="islandContent" class="island-content">
-                    <div class="input-row">
-                        <div class="input-field">
-                            <input type="number" id="islandAmount" step="0.01" min="0" placeholder="请输入日元金额">
-                        </div>
-                    </div>
-                    <div class="input-row">
-                        <div class="input-field">
-                            <input type="number" id="exchangeRate" step="0.001" min="0" value="0.05" placeholder="汇率">
-                        </div>
-                    </div>
-                    <div class="input-row">
-                        <div class="input-field">
-                            <input type="number" id="islandOrderCount" step="1" min="1" placeholder="订单数量(选填)">
-                        </div>
-                    </div>
-                    <div class="island-hint">
-                        ⚡ 岛内均摊总金额 = 日元金额 × 汇率 × 订单数量<br>（若不填订单数量，则总金额 = 日元金额 × 汇率）
-                    </div>
-                </div>
-                <button class="generate-island-btn" id="generateIslandBtn" disabled>生成岛内均摊</button>
-            </div>
-            <div id="noIslandHint" class="mode-hint hidden">当前为无岛内模式，不计算岛内均摊</div>
-        </div>
-
-        <!-- 日元设置 -->
-        <div class="function-card">
-            <div class="card-header">
-                <span class="icon">💴</span>
-                <h3>日元设置</h3>
-            </div>
-            
-            <!-- 是否需要日元开关 -->
-            <div class="price-toggle">
-                <label>
-                    <input type="radio" name="jpyMode" value="off" checked> 无日元
-                </label>
-                <label>
-                    <input type="radio" name="jpyMode" value="on"> 使用日元
-                </label>
-            </div>
-
-            <div id="jpySettingsArea" class="jpy-group-area hidden">
-                <!-- 动态生成分组日元设置 -->
-            </div>
-        </div>
-
-        <!-- 单领单价修改 -->
-        <div class="function-card">
-            <div class="card-header">
-                <span class="icon">🧾</span>
-                <h3>单领单价修改</h3>
-            </div>
-            
-            <!-- 是否需要修改单价开关 -->
-            <div class="price-toggle">
-                <label>
-                    <input type="radio" name="singlePriceToggle" value="off" checked> 不修改
-                </label>
-                <label>
-                    <input type="radio" name="singlePriceToggle" value="on"> 修改单价
-                </label>
-            </div>
-
-            <div id="singlePriceArea" class="single-group-area hidden">
-                <!-- 动态生成单领文件分组批量修改区域 -->
-            </div>
-        </div>
-
-        <!-- 配比设置 -->
-        <div class="function-card">
-            <div class="card-header">
-                <span class="icon">⚖️</span>
-                <h3>配比设置</h3>
-            </div>
-            
-            <!-- 是否需要修改单价开关 -->
-            <div class="price-toggle">
-                <label>
-                    <input type="radio" name="ratioPriceToggle" value="off" checked> 不修改
-                </label>
-                <label>
-                    <input type="radio" name="ratioPriceToggle" value="on"> 修改单价
-                </label>
-            </div>
-
-            <div id="ratioPriceArea" class="hidden">
-                <!-- 配比单价修改 -->
-                <div style="margin-bottom: 20px;">
-                    <h4 style="color: #1a3a5e; margin-bottom: 12px;">🔧 单价修改</h4>
-                    <div class="price-selectors">
-                        <div class="selector-group">
-                            <label>选择文件</label>
-                            <select id="ratioFileSelect" disabled>
-                                <option>请先上传配比文件</option>
-                            </select>
-                        </div>
-
-                        <div class="selector-group">
-                            <label>选择分组</label>
-                            <select id="ratioGroupSelect" disabled>
-                                <option>请先选择文件</option>
-                            </select>
-                        </div>
-
-                        <div class="selector-group">
-                            <label>选择制品</label>
-                            <select id="ratioProductSelect" disabled>
-                                <option>请先选择分组</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="price-edit">
-                        <div class="input-group">
-                            <input type="number" id="ratioProductPrice" step="0.01" min="0" placeholder="当前单价" disabled>
-                        </div>
-                        <button class="small-btn" id="applyRatioPriceBtn" disabled>应用</button>
-                    </div>
-                </div>
-
-                <!-- 配比整体价格调整 -->
-                <div class="batch-adjust">
-                    <div class="batch-title">📊 整体价格调整</div>
-                    <div class="batch-controls">
-                        <div class="batch-input-row">
-                            <input type="number" id="ratioBatchAmount" placeholder="输入金额" step="0.01">
-                            <select id="ratioBatchScope">
-                                <option value="group">按分组</option>
-                                <option value="box">按分盒</option>
-                            </select>
-                        </div>
-                        <div class="batch-buttons">
-                            <button class="small-btn" id="ratioIncreaseBtn" disabled>+ 增加</button>
-                            <button class="small-btn" id="ratioDecreaseBtn" disabled>- 减少</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 生成肾表按钮 - 独立区域 -->
-    <div class="generate-section">
-        <button class="generate-btn" id="generateBtn" disabled>✨ 生成肾表 ✨</button>
-    </div>
-
-    <!-- 表格区域 -->
-    <div class="table-section">
-        <div class="table-header">
-            <div class="table-tabs">
-                <div class="table-tab active" id="tabDetail" onclick="switchTableTab('detail')">📋 明细表</div>
-                <div class="table-tab" id="tabSummary" onclick="switchTableTab('summary')">💰 金额汇总表</div>
-            </div>
-            <div>
-                <button class="download-btn" id="downloadCurrentBtn" disabled>下载当前表格</button>
-            </div>
-        </div>
-        <div class="table-wrapper" id="tableWrapper">
-            <div style="text-align: center; padding: 40px; color: #2c5a7a;">请上传文件并点击"生成肾表"</div>
-        </div>
-        
-        <!-- 底部汇总区域 - 新增日元汇总 -->
-        <div class="summary-footer">
-            <div class="summary-item">
-                <span class="summary-label">日元汇总</span>
-                <span class="summary-value" id="totalJpy">0 <span>JPY</span></span>
-            </div>
-            <div class="summary-item">
-                <span class="summary-label">人民币汇总</span>
-                <span class="summary-value" id="totalCny">0 <span>CNY</span></span>
             </div>
         </div>
     </div>
@@ -2701,7 +1425,7 @@
             let singlePriceMap = new Map();
             let ratioPriceMap = new Map();
             
-            // 日元映射 (key: 文件索引_分组名)
+            // 日元映射
             let jpyMap = new Map();
             
             // 成配数量映射
@@ -2739,7 +1463,6 @@
                 }
             });
 
-            // 监听日元模式开关
             jpyModeRadios.forEach(radio => {
                 radio.addEventListener('change', () => {
                     const isOn = document.querySelector('input[name="jpyMode"]:checked').value === 'on';
@@ -3112,12 +1835,10 @@
                     const typeRow = rows[typeRowIndex];
                     const priceRow = rows[typeRowIndex + 1] || [];
                     
-                    // 解析分组
                     const groups = [];
                     const allProducts = [];
                     let currentGroup = null;
                     
-                    // 先收集所有分组标识
                     const groupMarkers = [];
                     for (let j = typeStartCol + 1; j < typeRow.length; j++) {
                         const cellValue = String(typeRow[j] || '').trim();
@@ -3131,7 +1852,6 @@
                         }
                     }
                     
-                    // 如果没有分组标识，创建一个默认分组
                     if (groupMarkers.length === 0) {
                         const defaultGroup = {
                             name: '默认分组',
@@ -3163,7 +1883,6 @@
                         }
                         groups.push(defaultGroup);
                     } else {
-                        // 按分组标识处理
                         for (let m = 0; m < groupMarkers.length; m++) {
                             const marker = groupMarkers[m];
                             const nextMarker = groupMarkers[m + 1];
@@ -3204,7 +1923,6 @@
                         }
                     }
 
-                    // 检查不同分组的制品名是否重复
                     const productNameSet = new Set();
                     let hasDuplicate = false;
                     
@@ -3217,7 +1935,6 @@
                         });
                     });
 
-                    // 收集所有制品
                     groups.forEach(group => {
                         group.products.forEach(product => {
                             allProducts.push({
@@ -3239,7 +1956,6 @@
                         });
                     });
 
-                    // 建立列索引映射
                     const colToProductMap = new Map();
                     allProducts.forEach(product => {
                         if (!product.isBox) {
@@ -3286,7 +2002,6 @@
                             } else {
                                 const product = colToProductMap.get(j);
                                 if (product) {
-                                    // 根据是否有重复制品名决定是否加分组前缀
                                     const displayName = hasDuplicate ? product.name + product.groupName : product.name;
                                     
                                     rawMemberOrders.push({
@@ -3321,14 +2036,13 @@
 
             // ========== 渲染函数 ==========
             function renderJpySettings() {
-                if ((singleFilesData.length === 0 && ratioFilesData.length === 0)) {
+                if (singleFilesData.length === 0 && ratioFilesData.length === 0) {
                     jpySettingsArea.innerHTML = '<div style="text-align:center; color:#2c5a7a; padding:20px;">暂无文件</div>';
                     return;
                 }
 
                 let html = '';
                 
-                // 单领文件的分组
                 singleFilesData.forEach((fileData, fileIdx) => {
                     if (!fileData) return;
                     
@@ -3345,14 +2059,12 @@
                         html += `<h4>${escapeHtml(group.name)}</h4>`;
                         html += `</div>`;
                         
-                        // 分组批量设置
                         html += `<div class="jpy-batch-input">`;
                         html += `<label>批量</label>`;
                         html += `<input type="number" id="jpy_batch_single_${fileIdx}_${group.name}" value="${currentValue}" step="1" min="0">`;
                         html += `<button onclick="applyJpyBatch('single', ${fileIdx}, '${group.name}')">应用</button>`;
                         html += `</div>`;
                         
-                        // 显示该组下的制品
                         html += `<div class="jpy-product-list">`;
                         group.products.forEach(product => {
                             const fullName = product.name + group.name;
@@ -3369,7 +2081,6 @@
                     html += `</div>`;
                 });
                 
-                // 配比文件的分组
                 ratioFilesData.forEach((fileData, fileIdx) => {
                     if (!fileData) return;
                     
@@ -3386,14 +2097,12 @@
                         html += `<h4>${escapeHtml(group.name)}</h4>`;
                         html += `</div>`;
                         
-                        // 分组批量设置
                         html += `<div class="jpy-batch-input">`;
                         html += `<label>批量</label>`;
                         html += `<input type="number" id="jpy_batch_ratio_${fileIdx}_${group.name}" value="${currentValue}" step="1" min="0">`;
                         html += `<button onclick="applyJpyBatch('ratio', ${fileIdx}, '${group.name}')">应用</button>`;
                         html += `</div>`;
                         
-                        // 显示该组下的制品
                         html += `<div class="jpy-product-list">`;
                         group.products.forEach(product => {
                             html += `<div class="jpy-product-item">`;
@@ -3405,7 +2114,7 @@
                             group.boxProducts.forEach(box => {
                                 html += `<div class="jpy-product-item">`;
                                 html += `<span>📦 ${escapeHtml(box.name)}</span>`;
-                                html += `<span style="color:#2c5a7a;">${currentValue} × 数量</span>`;
+                                html += `<span style="color:#2c5a7a;">${currentValue} × 数量 × 制品种类</span>`;
                                 html += `</div>`;
                             });
                         }
@@ -3427,7 +2136,6 @@
                 const key = `${type}_${fileIdx}_${groupName}`;
                 jpyMap.set(key, newValue);
                 
-                // 刷新显示
                 renderJpySettings();
             };
 
@@ -3665,7 +2373,6 @@
                     
                     let price = 0;
                     
-                    // 查找选中的制品价格
                     for (const group of fileData.groups) {
                         if (group.name === ratioGroupSelect.value) {
                             const product = group.products.find(p => p.name === selectedValue);
@@ -3813,316 +2520,305 @@
                 return Array.from(map.values());
             }
 
-// 转换为目标格式 - 支持日元列和抱盒特殊计算
-function convertToTargetFormat() {
-    const noIsland = noIslandCheckbox.checked;
-    const useJpy = document.querySelector('input[name="jpyMode"]:checked').value === 'on';
-    
-    // 收集所有文件的数据
-    let allFilesData = [];
-    let allOrders = [];
-    
-    // 处理单领文件
-    singleFilesData.forEach((fileData, fileIdx) => {
-        if (!fileData) return;
-        
-        const mergedOrders = mergeOrders(fileData.memberOrders);
-        
-        const orders = mergedOrders.map(order => ({
-            ...order,
-            fileIdx: `single_${fileIdx}`,
-            fileTitle: fileData.title,
-            fileType: 'single',
-            groupName: order.groupName
-        }));
-        
-        allOrders.push(...orders);
-        
-        allFilesData.push({
-            fileIdx: `single_${fileIdx}`,
-            title: fileData.title,
-            type: 'single',
-            orders: orders,
-            allProducts: fileData.allProducts || [],
-            groups: fileData.groups
-        });
-    });
-    
-    // 处理配比文件
-    ratioFilesData.forEach((fileData, fileIdx) => {
-        if (!fileData) return;
-        
-        const filteredOrders = filterRatioOrders(fileData.rawMemberOrders, fileIdx);
-        const mergedOrders = mergeOrders(filteredOrders);
-        
-        const orders = mergedOrders.map(order => ({
-            ...order,
-            fileIdx: `ratio_${fileIdx}`,
-            fileTitle: fileData.title,
-            fileType: 'ratio',
-            groupName: order.groupName
-        }));
-        
-        allOrders.push(...orders);
-        
-        allFilesData.push({
-            fileIdx: `ratio_${fileIdx}`,
-            title: fileData.title,
-            type: 'ratio',
-            orders: orders,
-            allProducts: fileData.allProducts || [],
-            groups: fileData.groups
-        });
-    });
-
-    // ========== 岛内均摊计算 ==========
-    let singleTotalQuantity = 0;
-    let ratioNonBoxTotalQuantity = 0;
-    let ratioBoxTotalWeight = 0;
-    
-    const ratioGroupInfo = new Map();
-
-    allFilesData.forEach(file => {
-        if (file.type === 'single') {
-            file.orders.forEach(order => {
-                singleTotalQuantity += order.quantity;
-            });
-        } else {
-            const fileIdx = file.fileIdx.replace('ratio_', '');
-            const ratioFileData = ratioFilesData[fileIdx];
-            
-            file.orders.forEach(order => {
-                if (order.isBox) {
-                    const groupName = order.groupName;
-                    const key = `${fileIdx}_${groupName}`;
+            // ========== 转换为目标格式 ==========
+            function convertToTargetFormat() {
+                const noIsland = noIslandCheckbox.checked;
+                const useJpy = document.querySelector('input[name="jpyMode"]:checked').value === 'on';
+                
+                let allFilesData = [];
+                let allOrders = [];
+                
+                singleFilesData.forEach((fileData, fileIdx) => {
+                    if (!fileData) return;
                     
-                    if (!ratioGroupInfo.has(key)) {
-                        const group = ratioFileData.groups.find(g => g.name === groupName);
-                        const productTypeCount = group ? group.products.length : 0;
-                        ratioGroupInfo.set(key, {
-                            productTypeCount: productTypeCount,
-                            boxCount: 0
+                    const mergedOrders = mergeOrders(fileData.memberOrders);
+                    
+                    const orders = mergedOrders.map(order => ({
+                        ...order,
+                        fileIdx: `single_${fileIdx}`,
+                        fileTitle: fileData.title,
+                        fileType: 'single',
+                        groupName: order.groupName
+                    }));
+                    
+                    allOrders.push(...orders);
+                    
+                    allFilesData.push({
+                        fileIdx: `single_${fileIdx}`,
+                        title: fileData.title,
+                        type: 'single',
+                        orders: orders,
+                        allProducts: fileData.allProducts || [],
+                        groups: fileData.groups
+                    });
+                });
+                
+                ratioFilesData.forEach((fileData, fileIdx) => {
+                    if (!fileData) return;
+                    
+                    const filteredOrders = filterRatioOrders(fileData.rawMemberOrders, fileIdx);
+                    const mergedOrders = mergeOrders(filteredOrders);
+                    
+                    const orders = mergedOrders.map(order => ({
+                        ...order,
+                        fileIdx: `ratio_${fileIdx}`,
+                        fileTitle: fileData.title,
+                        fileType: 'ratio',
+                        groupName: order.groupName
+                    }));
+                    
+                    allOrders.push(...orders);
+                    
+                    allFilesData.push({
+                        fileIdx: `ratio_${fileIdx}`,
+                        title: fileData.title,
+                        type: 'ratio',
+                        orders: orders,
+                        allProducts: fileData.allProducts || [],
+                        groups: fileData.groups
+                    });
+                });
+
+                // ========== 岛内均摊计算 ==========
+                let singleTotalQuantity = 0;
+                let ratioNonBoxTotalQuantity = 0;
+                let ratioBoxTotalWeight = 0;
+                
+                const ratioGroupInfo = new Map();
+
+                allFilesData.forEach(file => {
+                    if (file.type === 'single') {
+                        file.orders.forEach(order => {
+                            singleTotalQuantity += order.quantity;
+                        });
+                    } else {
+                        const fileIdx = file.fileIdx.replace('ratio_', '');
+                        const ratioFileData = ratioFilesData[fileIdx];
+                        
+                        file.orders.forEach(order => {
+                            if (order.isBox) {
+                                const groupName = order.groupName;
+                                const key = `${fileIdx}_${groupName}`;
+                                
+                                if (!ratioGroupInfo.has(key)) {
+                                    const group = ratioFileData.groups.find(g => g.name === groupName);
+                                    const productTypeCount = group ? group.products.length : 0;
+                                    ratioGroupInfo.set(key, {
+                                        productTypeCount: productTypeCount,
+                                        boxCount: 0
+                                    });
+                                }
+                                
+                                const info = ratioGroupInfo.get(key);
+                                info.boxCount += order.quantity;
+                                ratioGroupInfo.set(key, info);
+                            } else {
+                                ratioNonBoxTotalQuantity += order.quantity;
+                            }
                         });
                     }
-                    
-                    const info = ratioGroupInfo.get(key);
-                    info.boxCount += order.quantity;
-                    ratioGroupInfo.set(key, info);
-                } else {
-                    ratioNonBoxTotalQuantity += order.quantity;
+                });
+
+                ratioGroupInfo.forEach(info => {
+                    ratioBoxTotalWeight += info.boxCount * info.productTypeCount;
+                });
+
+                const denominator = singleTotalQuantity + ratioNonBoxTotalQuantity + ratioBoxTotalWeight;
+
+                let sharePerItem = 0;
+                if (!noIsland && islandTotalAmount > 0 && denominator > 0) {
+                    sharePerItem = islandTotalAmount / denominator;
                 }
-            });
-        }
-    });
 
-    ratioGroupInfo.forEach(info => {
-        ratioBoxTotalWeight += info.boxCount * info.productTypeCount;
-    });
-
-    const denominator = singleTotalQuantity + ratioNonBoxTotalQuantity + ratioBoxTotalWeight;
-
-    let sharePerItem = 0;
-    if (!noIsland && islandTotalAmount > 0 && denominator > 0) {
-        sharePerItem = islandTotalAmount / denominator;
-    }
-
-    // ========== 构建明细表 ==========
-    let detailHeaders = ['角色', 'cn', '数量'];
-    if (useJpy) detailHeaders.push('日元');
-    detailHeaders.push('单价');
-    if (!noIsland) detailHeaders.push('岛内均摊');
-    detailHeaders.push('肾额', '国际');
-    
-    let detailRows = [];
-    let totalJpyAmount = 0;
-    
-    allFilesData.forEach(file => {
-        detailRows.push({
-            isTitleRow: true,
-            fileTitle: file.title,
-            fileType: file.type,
-            colspan: detailHeaders.length
-        });
-        
-        const productGroups = new Map();
-        const productOrder = [];
-        
-        file.orders.forEach(order => {
-            const productName = order.productName;
-            if (!productGroups.has(productName)) {
-                productGroups.set(productName, []);
-                productOrder.push(productName);
-            }
-            productGroups.get(productName).push(order);
-        });
-        
-        productOrder.forEach(productName => {
-            const orders = productGroups.get(productName);
-            
-            // 查找制品单价
-            let productPrice = 0;
-            if (file.type === 'single') {
-                const key = `${file.fileIdx.replace('single_', '')}_${productName}`;
-                productPrice = singlePriceMap.get(key) || 0;
+                // ========== 构建明细表 ==========
+                let detailHeaders = ['角色', 'cn', '数量'];
+                if (useJpy) detailHeaders.push('日元');
+                detailHeaders.push('单价');
+                if (!noIsland) detailHeaders.push('岛内均摊');
+                detailHeaders.push('肾额', '国际');
                 
-                if (productPrice === 0 && file.allProducts) {
-                    const product = file.allProducts.find(p => (p.name + p.groupName) === productName);
-                    if (product) productPrice = product.price;
-                }
-            } else {
-                for (const order of orders) {
-                    if (order.isBox) {
-                        const key = `${file.fileIdx.replace('ratio_', '')}_${order.productName}`;
-                        productPrice = ratioPriceMap.get(key) || 0;
-                        if (productPrice === 0 && file.allProducts) {
-                            const product = file.allProducts.find(p => p.isBox && p.name === order.productName);
-                            if (product) productPrice = product.price;
+                let detailRows = [];
+                let totalJpyAmount = 0;
+                
+                allFilesData.forEach(file => {
+                    detailRows.push({
+                        isTitleRow: true,
+                        fileTitle: file.title,
+                        fileType: file.type,
+                        colspan: detailHeaders.length
+                    });
+                    
+                    const productGroups = new Map();
+                    const productOrder = [];
+                    
+                    file.orders.forEach(order => {
+                        const productName = order.productName;
+                        if (!productGroups.has(productName)) {
+                            productGroups.set(productName, []);
+                            productOrder.push(productName);
                         }
-                        break;
-                    } else {
-                        for (const group of ratioFilesData[file.fileIdx.replace('ratio_', '')]?.groups || []) {
-                            const product = group.products.find(p => {
-                                const fileData = ratioFilesData[file.fileIdx.replace('ratio_', '')];
-                                if (fileData.hasDuplicateNames) {
-                                    return (p.name + group.name) === order.productName;
+                        productGroups.get(productName).push(order);
+                    });
+                    
+                    productOrder.forEach(productName => {
+                        const orders = productGroups.get(productName);
+                        
+                        let productPrice = 0;
+                        if (file.type === 'single') {
+                            const key = `${file.fileIdx.replace('single_', '')}_${productName}`;
+                            productPrice = singlePriceMap.get(key) || 0;
+                            
+                            if (productPrice === 0 && file.allProducts) {
+                                const product = file.allProducts.find(p => (p.name + p.groupName) === productName);
+                                if (product) productPrice = product.price;
+                            }
+                        } else {
+                            for (const order of orders) {
+                                if (order.isBox) {
+                                    const key = `${file.fileIdx.replace('ratio_', '')}_${order.productName}`;
+                                    productPrice = ratioPriceMap.get(key) || 0;
+                                    if (productPrice === 0 && file.allProducts) {
+                                        const product = file.allProducts.find(p => p.isBox && p.name === order.productName);
+                                        if (product) productPrice = product.price;
+                                    }
+                                    break;
                                 } else {
-                                    return p.name === order.productName;
+                                    for (const group of ratioFilesData[file.fileIdx.replace('ratio_', '')]?.groups || []) {
+                                        const product = group.products.find(p => {
+                                            const fileData = ratioFilesData[file.fileIdx.replace('ratio_', '')];
+                                            if (fileData && fileData.hasDuplicateNames) {
+                                                return (p.name + group.name) === order.productName;
+                                            } else {
+                                                return p.name === order.productName;
+                                            }
+                                        });
+                                        if (product) {
+                                            const key = `${file.fileIdx.replace('ratio_', '')}_${product.name}`;
+                                            productPrice = ratioPriceMap.get(key) || product.price;
+                                            break;
+                                        }
+                                    }
+                                    break;
                                 }
-                            });
-                            if (product) {
-                                const key = `${file.fileIdx.replace('ratio_', '')}_${product.name}`;
-                                productPrice = ratioPriceMap.get(key) || product.price;
-                                break;
                             }
                         }
-                        break;
+                        
+                        orders.forEach((order, idx) => {
+                            let jpyAmount = 0;
+                            if (useJpy) {
+                                const key = `${file.type}_${file.fileIdx.replace(file.type + '_', '')}_${order.groupName}`;
+                                const groupJpy = jpyMap.get(key) || 0;
+                                
+                                if (order.isBox) {
+                                    const fileIdx = file.fileIdx.replace('ratio_', '');
+                                    const boxKey = `${fileIdx}_${order.groupName}`;
+                                    const info = ratioGroupInfo.get(boxKey);
+                                    const productTypeCount = info ? info.productTypeCount : 1;
+                                    jpyAmount = groupJpy * productTypeCount * order.quantity;
+                                } else {
+                                    jpyAmount = groupJpy * order.quantity;
+                                }
+                                totalJpyAmount += jpyAmount;
+                            }
+                            
+                            let shareForOrder = 0;
+                            if (!noIsland && islandTotalAmount > 0 && sharePerItem > 0) {
+                                if (file.type === 'single') {
+                                    shareForOrder = sharePerItem * order.quantity;
+                                } else {
+                                    if (order.isBox) {
+                                        const fileIdx = file.fileIdx.replace('ratio_', '');
+                                        const key = `${fileIdx}_${order.groupName}`;
+                                        const info = ratioGroupInfo.get(key);
+                                        const productTypeCount = info ? info.productTypeCount : 1;
+                                        shareForOrder = sharePerItem * productTypeCount * order.quantity;
+                                    } else {
+                                        shareForOrder = sharePerItem * order.quantity;
+                                    }
+                                }
+                            }
+                            
+                            const kidneyAmount = (productPrice * order.quantity) + shareForOrder;
+                            
+                            const rowData = {
+                                isTitleRow: false,
+                                product: productName,
+                                member: order.member,
+                                quantity: order.quantity,
+                                jpy: useJpy ? jpyAmount : null,
+                                price: productPrice,
+                                kidney: kidneyAmount,
+                                international: '待补',
+                                isFirstInProduct: idx === 0,
+                                fileType: file.type,
+                                fileTitle: file.title
+                            };
+                            
+                            if (!noIsland) rowData.islandShare = shareForOrder;
+                            
+                            detailRows.push(rowData);
+                        });
+                    });
+                });
+
+                const fileProductCounts = new Map();
+                detailRows.forEach(row => {
+                    if (!row.isTitleRow) {
+                        const key = `${row.fileTitle}_${row.product}`;
+                        fileProductCounts.set(key, (fileProductCounts.get(key) || 0) + 1);
                     }
-                }
-            }
-            
-            orders.forEach((order, idx) => {
-                // 计算日元金额
-                let jpyAmount = 0;
-                if (useJpy) {
-                    const key = `${file.type}_${file.fileIdx.replace(file.type + '_', '')}_${order.groupName}`;
-                    const groupJpy = jpyMap.get(key) || 0;
-                    
-                    if (order.isBox) {
-                        // 抱盒：日元 = 用户输入金额 × 该组制品种类数 × 数量
-                        const fileIdx = file.fileIdx.replace('ratio_', '');
-                        const boxKey = `${fileIdx}_${order.groupName}`;
-                        const info = ratioGroupInfo.get(boxKey);
-                        const productTypeCount = info ? info.productTypeCount : 1;
-                        jpyAmount = groupJpy * productTypeCount * order.quantity;
-                    } else {
-                        // 非抱盒：日元 = 用户输入金额 × 数量
-                        jpyAmount = groupJpy * order.quantity;
-                    }
-                    totalJpyAmount += jpyAmount;
-                }
-                
-                // 计算岛内均摊
-                let shareForOrder = 0;
-                if (!noIsland && islandTotalAmount > 0 && sharePerItem > 0) {
-                    if (file.type === 'single') {
-                        shareForOrder = sharePerItem * order.quantity;
-                    } else {
-                        if (order.isBox) {
-                            const fileIdx = file.fileIdx.replace('ratio_', '');
-                            const key = `${fileIdx}_${order.groupName}`;
-                            const info = ratioGroupInfo.get(key);
-                            const productTypeCount = info ? info.productTypeCount : 1;
-                            shareForOrder = sharePerItem * productTypeCount * order.quantity;
-                        } else {
-                            shareForOrder = sharePerItem * order.quantity;
-                        }
-                    }
-                }
-                
-                const kidneyAmount = (productPrice * order.quantity) + shareForOrder;
-                
-                const rowData = {
-                    isTitleRow: false,
-                    product: productName,
-                    member: order.member,
-                    quantity: order.quantity,
-                    jpy: useJpy ? jpyAmount : null,
-                    price: productPrice,
-                    kidney: kidneyAmount,
-                    international: '待补',
-                    isFirstInProduct: idx === 0,
-                    fileType: file.type,
-                    fileTitle: file.title
+                });
+
+                detailData = { 
+                    headers: detailHeaders, 
+                    rows: detailRows, 
+                    fileProductCounts,
+                    noIsland: noIsland,
+                    useJpy: useJpy
                 };
+
+                // ========== 构建金额汇总表 ==========
+                const memberMap = new Map();
+                detailRows.forEach(row => {
+                    if (row.isTitleRow) return;
+                    const key = row.member;
+                    memberMap.set(key, (memberMap.get(key) || 0) + row.kidney);
+                });
+
+                let summaryRows = [];
+                memberMap.forEach((totalZfb, member) => {
+                    const zfbTimes001 = Math.round(totalZfb * 0.001 * 100) / 100;
+                    const vxExtra = zfbTimes001 >= 0.01 ? zfbTimes001 : 0;
+                    const totalVx = totalZfb + vxExtra;
+                    
+                    summaryRows.push({
+                        cn: member,
+                        zfb: totalZfb,
+                        vx: totalVx
+                    });
+                });
                 
-                if (!noIsland) rowData.islandShare = shareForOrder;
+                summaryRows.sort((a, b) => a.cn.localeCompare(b.cn));
                 
-                detailRows.push(rowData);
-            });
-        });
-    });
+                summaryData = { headers: ['cn', 'ZFB肾额', 'VX肾额'], rows: summaryRows };
 
-    // 计算每个文件内每个制品的行数
-    const fileProductCounts = new Map();
-    detailRows.forEach(row => {
-        if (!row.isTitleRow) {
-            const key = `${row.fileTitle}_${row.product}`;
-            fileProductCounts.set(key, (fileProductCounts.get(key) || 0) + 1);
-        }
-    });
+                let totalCny = 0;
+                detailRows.forEach(row => {
+                    if (!row.isTitleRow) totalCny += row.kidney;
+                });
+                
+                const islandJpy = parseFloat(islandAmount.value) || 0;
+                const orderCount = parseFloat(islandOrderCount.value);
+                const islandJpyTotal = !isNaN(orderCount) && orderCount > 0 ? islandJpy * orderCount : islandJpy;
 
-    detailData = { 
-        headers: detailHeaders, 
-        rows: detailRows, 
-        fileProductCounts,
-        noIsland: noIsland,
-        useJpy: useJpy
-    };
+                totalCnySpan.innerHTML = `${totalCny.toFixed(2)} <span>CNY</span>`;
+                totalJpySpan.innerHTML = `${(totalJpyAmount + islandJpyTotal).toFixed(0)} <span>JPY</span>`;
 
-// ========== 构建金额汇总表 ==========
-const memberMap = new Map();
-detailRows.forEach(row => {
-    if (row.isTitleRow) return;
-    const key = row.member;
-    memberMap.set(key, (memberMap.get(key) || 0) + row.kidney);
-});
-
-let summaryRows = [];
-memberMap.forEach((totalZfb, member) => {
-    const zfbTimes001 = Math.round(totalZfb * 0.001 * 100) / 100;
-    const vxExtra = zfbTimes001 >= 0.01 ? zfbTimes001 : 0;
-    const totalVx = totalZfb + vxExtra;
-    
-    summaryRows.push({
-        cn: member,
-        zfb: totalZfb,
-        vx: totalVx
-    });
-});
-
-summaryRows.sort((a, b) => a.cn.localeCompare(b.cn));
-
-summaryData = { headers: ['cn', 'ZFB肾额', 'VX肾额'], rows: summaryRows };
-
-// 计算汇总金额
-let totalCny = 0;
-detailRows.forEach(row => {
-    if (!row.isTitleRow) totalCny += row.kidney;
-});
-
-// 计算岛内日元部分（不使用汇率）
-const islandJpy = parseFloat(islandAmount.value) || 0;
-const orderCount = parseFloat(islandOrderCount.value);
-const islandJpyTotal = !isNaN(orderCount) && orderCount > 0 ? islandJpy * orderCount : islandJpy;
-
-totalCnySpan.innerHTML = `${totalCny.toFixed(2)} <span>CNY</span>`;
-totalJpySpan.innerHTML = `${(totalJpyAmount + islandJpyTotal).toFixed(0)} <span>JPY</span>`;
-
-if (currentTableTab === 'detail') renderDetailTable();
-else renderSummaryTable();
-
-downloadCurrentBtn.disabled = false;
-}
+                if (currentTableTab === 'detail') renderDetailTable();
+                else renderSummaryTable();
+                
+                downloadCurrentBtn.disabled = false;
+            }
 
             function renderDetailTable() {
                 if (!detailData || detailData.rows.length === 0) {
@@ -4286,9 +2982,6 @@ downloadCurrentBtn.disabled = false;
                 }
             });
         })();
-    </script>
-</body>
-</html>');
     </script>
 </body>
 </html>

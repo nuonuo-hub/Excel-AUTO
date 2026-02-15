@@ -1656,7 +1656,7 @@
                 });
             }
 
-// ========== 处理特殊格式的单领解析函数 ==========
+// ========== 修复订单提取的单领解析函数 ==========
 function parseSingleFile(rows, fileName, fileIndex) {
     try {
         console.log('开始解析单领文件:', fileName);
@@ -1682,67 +1682,134 @@ function parseSingleFile(rows, fileName, fileIndex) {
         console.log('种类行:', typeRow);
         console.log('价格行:', priceRow);
         
-        // 2. 收集制品信息
-        const products = [];
-        // 列1是第一个制品（立牌）
-        // 列2是第二个制品（文件夹）
+        // 2. 遍历所有列，识别分组标识和制品
+        const groups = [];
+        const allProducts = [];
+        let currentGroup = null;
+        
         for (let j = 1; j < typeRow.length; j++) {
-            const productName = String(typeRow[j] || '').trim();
-            if (!productName) continue;
+            const cellValue = String(typeRow[j] || '').trim();
+            if (!cellValue) continue;
             
             const price = parseFloat(String(priceRow[j] || '0').replace(/[^0-9.-]/g, ''));
             
-            products.push({
-                name: productName,
-                price: isNaN(price) ? 0 : price,
-                colIndex: j
-            });
+            // 判断是否为分组标识（价格 >= 9999）
+            const isGroupMarker = price >= 9999;
             
-            console.log(`制品[列${j}]:`, productName, '价格:', price);
+            if (isGroupMarker) {
+                // 遇到分组标识，新建一个分组
+                currentGroup = {
+                    name: cellValue,
+                    products: [],
+                    startCol: j
+                };
+                groups.push(currentGroup);
+                console.log('发现分组:', cellValue, '价格:', price, '列索引:', j);
+            } else {
+                // 普通制品列
+                let productName = cellValue;
+                
+                // 如果当前有分组，制品名需要加上分组名
+                if (currentGroup) {
+                    productName = productName + currentGroup.name;
+                }
+                
+                const productInfo = {
+                    name: productName,
+                    originalName: cellValue,
+                    price: isNaN(price) ? 0 : price,
+                    colIndex: j,
+                    groupName: currentGroup ? currentGroup.name : ''
+                };
+                
+                // 添加到当前分组
+                if (currentGroup) {
+                    currentGroup.products.push(productInfo);
+                } else {
+                    // 如果没有分组，创建默认分组
+                    let defaultGroup = groups.find(g => g.name === '默认分组');
+                    if (!defaultGroup) {
+                        defaultGroup = {
+                            name: '默认分组',
+                            products: [],
+                            startCol: 0
+                        };
+                        groups.push(defaultGroup);
+                    }
+                    defaultGroup.products.push(productInfo);
+                }
+                
+                allProducts.push(productInfo);
+                console.log('发现制品:', productName, '价格:', price, '所在分组:', currentGroup ? currentGroup.name : '默认分组', '列索引:', j);
+            }
         }
         
-        // 3. 提取订单
-        const orders = [];
+        // 3. 建立列索引到制品的映射
+        const colToProductMap = new Map();
+        allProducts.forEach(product => {
+            colToProductMap.set(product.colIndex, product);
+        });
+        
+        // 4. 提取成员订单
+        const memberOrders = [];
+        
+        // 打印数据行以便调试
+        console.log('数据行开始:');
+        for (let i = typeRowIndex + 2; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row) continue;
+            console.log(`行${i}:`, row);
+        }
         
         // 从种类行+2开始遍历数据行
         for (let i = typeRowIndex + 2; i < rows.length; i++) {
             const row = rows[i];
             if (!row || row.length === 0) continue;
             
-            // 对于这种特殊格式：
-            // 列1既是成员名，也是立牌制品的购买者
-            // 列2是文件夹制品的购买者
+            // 第1列是成员名（序号后的第一列）
+            const memberNameFromRow = String(row[1] || '').trim();
             
-            // 处理列1：立牌制品
-            const memberNameForProduct1 = String(row[1] || '').trim();
-            if (memberNameForProduct1 && !memberNameForProduct1.includes('总')) {
-                orders.push({
-                    member: memberNameForProduct1,  // 成员名就是购买者
-                    productName: products[0].name,   // 立牌（通）
-                    price: products[0].price,
-                    quantity: 1
-                });
-                console.log(`行${i},列1: ${memberNameForProduct1} 购买了 ${products[0].name}`);
+            // 遍历所有可能的列（从第2列开始到最后一列）
+            for (let j = 2; j < row.length; j++) {
+                const cellValue = String(row[j] || '').trim();
+                if (!cellValue) continue;
+                
+                // 找到对应的制品
+                const product = colToProductMap.get(j);
+                if (product) {
+                    // 重要：使用单元格的值作为成员名
+                    memberOrders.push({
+                        member: cellValue,  // 使用单元格的值（如"C1"、"忱"等）
+                        productName: product.name,
+                        groupName: product.groupName,
+                        quantity: 1
+                    });
+                    console.log(`行${i},列${j}: 找到订单 - 成员:${cellValue}, 制品:${product.name}`);
+                }
             }
             
-            // 处理列2：文件夹制品
-            const memberNameForProduct2 = String(row[2] || '').trim();
-            if (memberNameForProduct2 && !memberNameForProduct2.includes('总')) {
-                orders.push({
-                    member: memberNameForProduct2,
-                    productName: products[1].name,   // 文件夹（通）
-                    price: products[1].price,
-                    quantity: 1
-                });
-                console.log(`行${i},列2: ${memberNameForProduct2} 购买了 ${products[1].name}`);
+            // 特殊处理：如果第1列有值且不是数字序号，可能也是订单（根据您的文件格式）
+            if (memberNameFromRow && !/^\d+$/.test(memberNameFromRow) && !memberNameFromRow.includes('总')) {
+                // 检查第1列是否对应某个制品（通常第1列是成员名，不是制品）
+                // 但根据您的文件格式，有时第1列也可能是制品数据
+                const productForCol1 = colToProductMap.get(1);
+                if (productForCol1) {
+                    memberOrders.push({
+                        member: memberNameFromRow,
+                        productName: productForCol1.name,
+                        groupName: productForCol1.groupName,
+                        quantity: 1
+                    });
+                    console.log(`行${i},列1: 找到订单 - 成员:${memberNameFromRow}, 制品:${productForCol1.name}`);
+                }
             }
         }
         
-        console.log('原始订单数:', orders.length);
+        console.log('原始订单数:', memberOrders.length);
         
-        // 4. 合并相同 member + productName 的订单
+        // 5. 合并相同 member + productName 的订单
         const orderMap = new Map();
-        orders.forEach(order => {
+        memberOrders.forEach(order => {
             const key = `${order.member}|${order.productName}`;
             if (orderMap.has(key)) {
                 orderMap.get(key).quantity += order.quantity;
@@ -1754,21 +1821,15 @@ function parseSingleFile(rows, fileName, fileIndex) {
         const mergedOrders = Array.from(orderMap.values());
         console.log('合并后订单数:', mergedOrders.length);
         
-        // 5. 按制品分组统计
-        const stats = {};
+        // 6. 按制品分组统计
+        const productStats = {};
         mergedOrders.forEach(order => {
-            if (!stats[order.productName]) {
-                stats[order.productName] = 0;
+            if (!productStats[order.productName]) {
+                productStats[order.productName] = 0;
             }
-            stats[order.productName] += order.quantity;
+            productStats[order.productName] += order.quantity;
         });
-        console.log('制品统计:', stats);
-        
-        // 6. 构建分组结构
-        const groups = [{
-            name: '全部制品',
-            products: products
-        }];
+        console.log('制品统计:', productStats);
         
         // 7. 保存解析结果
         singleFilesData[fileIndex] = {
@@ -1776,7 +1837,7 @@ function parseSingleFile(rows, fileName, fileIndex) {
             title: fileName.replace(/\.[^/.]+$/, ""),
             type: 'single',
             groups: groups,
-            allProducts: products,
+            allProducts: allProducts,
             memberOrders: mergedOrders
         };
         
